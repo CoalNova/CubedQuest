@@ -36,25 +36,41 @@ pub fn loadDebugLevel() !Level {
     var level: Level = .{};
 
     level.name = "debug";
-    level.cubes = try sys.allocator.alloc(cbe.Cube, 2);
+    level.cubes = try sys.allocator.alloc(cbe.Cube, 3);
     var ogd = cbe.OGD{
         .type = @intFromEnum(cbe.CubeType.player),
         .paint = @intFromEnum(cbe.CubePaint.player),
+        .pos_z = 136,
     };
     var cube = try cbe.createCube(ogd, 0);
     level.cubes[0] = cube;
     ogd = cbe.OGD{
         .type = @intFromEnum(cbe.CubeType.ground),
         .paint = @intFromEnum(cbe.CubePaint.ground),
-        .pos_z = 124,
-        .sca_x = 2,
-        .sca_y = 1,
+        .pos_z = 122,
+        .sca_x = 4,
+        .sca_y = 3,
+        .sca_z = 0,
     };
     cube = try cbe.createCube(ogd, 1);
     level.cubes[1] = cube;
+    ogd = cbe.OGD{
+        .type = @intFromEnum(cbe.CubeType.ground),
+        .paint = @intFromEnum(cbe.CubePaint.glass),
+        .pos_z = 122,
+        .pos_x = 129,
+        .pos_y = 129,
+        .sca_z = 2,
+    };
+    cube = try cbe.createCube(ogd, 2);
+    level.cubes[2] = cube;
 
-    wnd.windows.items[0].camera.euclid.position.addAxial(.{ 0.0, -2.0, 513.0 });
-    wnd.windows.items[0].camera.euclid.rotation = zmt.qmul(wnd.windows.items[0].camera.euclid.rotation, csm.convEulToQuat(csm.Vec3{ 0, 0.1, 0 }));
+    const camera = &wnd.windows.items[0].camera;
+    camera.euclid.position.addAxial(.{ -2.0, -4.0, 513.0 });
+    camera.euclid.rotation = zmt.qmul(wnd.windows.items[0].camera.euclid.rotation, csm.convEulToQuat(
+        csm.Vec3{ 0.0, 0.3, 0.3 },
+    ));
+    camera.field_of_view = 1.4;
 
     return level;
 }

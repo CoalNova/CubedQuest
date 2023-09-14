@@ -59,7 +59,10 @@ pub fn render() void {
 
             const sun_color: [4]f32 = lvl.active_level.sky_color.toArray();
             const sun_direction: [3]f32 = lvl.active_level.sun_direction.toArray();
+            const stride = cube.euclid.scale.toArray();
 
+            zgl.uniform3fv(shader.str_name, 1, &stride);
+            if (checkGLErrorState("Stride Uniform Assignment")) std.debug.print("Uniform Address:{d}\n", .{shader.str_name});
             zgl.uniform3fv(shader.rot_name, 1, &sun_direction);
             if (checkGLErrorState("Sun Rotation Uniform Assignment")) std.debug.print("Uniform Address:{d}\n", .{shader.rot_name});
             zgl.uniform4fv(shader.sun_name, 1, &sun_color);

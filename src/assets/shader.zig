@@ -136,16 +136,19 @@ const cube_f_shader =
     \\out vec4 outColor;
     \\in vec2 fragUV;
     \\in vec3 fragNormal;
+    \\flat in float fragScale;
     \\
     \\uniform vec4 colorA;
     \\uniform vec4 colorB;
     \\uniform vec3 rotation;
     \\uniform vec4 sun;
     \\
+    \\float edge = 0.2f;
+    \\
     \\void main()
     \\{
     \\  outColor = 
-    \\      ((step(0.4f, abs(fragUV.x)) == 1 || step(0.4f, abs(fragUV.y)) == 1) ? colorB : colorA) + 
+    \\      ((abs(fragUV.x) > (fragScale - edge) || abs(fragUV.y) > (fragScale - edge)) ? colorB : colorA) + 
     \\          max(0.0, dot(rotation, fragNormal)) * sun * 0.1f; 
     \\}
 ;
@@ -159,9 +162,10 @@ const cube_g_shader =
     \\
     \\out vec2 fragUV;
     \\out vec3 fragNormal;
+    \\flat out float fragScale;
     \\
     \\uniform mat4 matrix; 
-    \\
+    \\uniform vec3 stride; //matches scale on cube
     \\
     \\vec3 verts[8] = vec3[]( 
     \\	vec3(-0.5f, -0.5f, -0.5f), vec3(0.5f, -0.5f, -0.5f), 
@@ -170,45 +174,51 @@ const cube_g_shader =
     \\	vec3(0.5f, 0.5f, 0.5f), vec3(-0.5f, 0.5f, 0.5f)
     \\); 
     \\
-    \\void BuildFace(int fir, int sec, int thr, int frt, vec3 normal)
+    \\void BuildFace(int fir, int sec, int thr, int frt, vec3 normal, float scale)
     \\{ 
     \\	gl_Position = matrix * vec4(verts[fir], 1.0f);
     \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy ;
-    \\  fragUV = vec2(-0.5f, 0.5f);	
+    \\  fragUV = vec2(-1.0f, 1.0f) * scale;
+    \\  fragScale = scale;	
     \\  EmitVertex(); 
     \\	gl_Position = matrix * vec4(verts[sec], 1.0f);
     \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy;
-    \\  fragUV = vec2(0.5f, -0.5f);	
+    \\  fragUV = vec2(1.0f, -1.0f) * scale;
+    \\  fragScale = scale;
     \\	EmitVertex(); 
     \\	gl_Position = matrix * vec4(verts[thr], 1.0f);
     \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy;
-    \\  fragUV = vec2(0.5f, 0.5f);	
+    \\  fragUV = vec2(1.0f, 1.0f) * scale;
+    \\  fragScale = scale;
     \\	EmitVertex(); 
     \\	EndPrimitive();
     \\	 
     \\	gl_Position = matrix * vec4(verts[fir], 1.0f);
     \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy;
-    \\  fragUV = vec2(0.5f, -0.5f);	
+    \\  fragUV = vec2(1.0f, -1.0f) * scale;
+    \\  fragScale = scale;
     \\	EmitVertex(); 
     \\	gl_Position = matrix * vec4(verts[frt], 1.0f);
     \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy;
-    \\  fragUV = vec2(0.5f, 0.5f);	
+    \\  fragUV = vec2(1.0f, 1.0f) * scale;
+    \\  fragScale = scale;
     \\	EmitVertex(); 
     \\	gl_Position = matrix * vec4(verts[sec], 1.0f);
     \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy;
-    \\  fragUV = vec2(-0.5f, 0.5f);	
+    \\  fragUV = vec2(-1.0f, 1.0f) * scale;
+    \\  fragScale = scale;
     \\	EmitVertex(); 
     \\	EndPrimitive(); 
     \\} 
     \\
     \\void main()
     \\{ 
-    \\	BuildFace(0, 3, 2, 1, vec3(0.0, 1.0f, 0.0f));
-    \\	BuildFace(5, 2, 7, 0, vec3(1.0f, 0.0f, 0.0f)); 
-    \\	BuildFace(1, 6, 3, 4, vec3(-1.0f, 0.0f, 0.0f));
-    \\	BuildFace(2, 6, 7, 3, vec3(0.0f, 0.0f, -1.0f)); 
-    \\	BuildFace(5, 1, 0, 4, vec3(0.0f, 0.0f, 1.0f));
-    \\	BuildFace(4, 7, 6, 5, vec3(0.0f, -1.0f, 0.0f));
+    \\	BuildFace(0, 3, 2, 1, vec3(0.0, 1.0f, 0.0f),   stride.y);
+    \\	BuildFace(5, 2, 7, 0, vec3(1.0f, 0.0f, 0.0f),  stride.x); 
+    \\	BuildFace(1, 6, 3, 4, vec3(-1.0f, 0.0f, 0.0f), stride.x);
+    \\	BuildFace(2, 6, 7, 3, vec3(0.0f, 0.0f, -1.0f), stride.z); 
+    \\	BuildFace(5, 1, 0, 4, vec3(0.0f, 0.0f, 1.0f),  stride.z);
+    \\	BuildFace(4, 7, 6, 5, vec3(0.0f, -1.0f, 0.0f), stride.y);
     \\}
 ;
 

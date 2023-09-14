@@ -58,14 +58,28 @@ pub fn convEulToQuat(vec: Vec3) Quat {
 }
 
 /// TODO this
-pub fn decomposeTransform(body: zph.Body, rotation: *zmt.Quat, position: *Vec3, scale: *Vec3) void {
-    _ = scale;
-    _ = rotation;
-
+pub fn decomposeTransform(body: zph.Body, rotation: *zmt.Quat, position: *Vec3) void {
     var temp: [12]f32 = undefined;
-
     // Get the transform from Bullet and into 't'
     body.getGraphicsWorldTransform(&temp);
+
+    std.debug.print("[{d:.3}, {d:.3}, {d:.3}]\n[{d:.3}, {d:.3}, {d:.3}]\n" ++
+        "[{d:.3}, {d:.3}, {d:.3}]\n[{d:.3}, {d:.3}, {d:.3}]\n\n", .{
+        temp[0],
+        temp[1],
+        temp[2],
+        temp[3],
+        temp[4],
+        temp[5],
+        temp[6],
+        temp[7],
+        temp[8],
+        temp[9],
+        temp[10],
+        temp[11],
+    });
+
+    rotation.* = zmt.util.getRotationQuat(zmt.loadMat43(&temp));
     position.* = Vec3{ temp[9], temp[10], temp[11] };
 }
 
@@ -164,17 +178,17 @@ pub fn printMatrix(matrix: zmt.Mat) void {
         \\[{d:.3},{d:.3},{d:.3},{d:.3}]
         \\
     , .{
-        matrix[0][0],
-        matrix[0][1],
-        matrix[0][2],
+        matrix[0],
+        matrix[3],
+        matrix[6],
         matrix[0][3],
-        matrix[1][0],
-        matrix[1][1],
-        matrix[1][2],
+        matrix[1],
+        matrix[4],
+        matrix[7],
         matrix[1][3],
-        matrix[2][0],
-        matrix[2][1],
-        matrix[2][2],
+        matrix[2],
+        matrix[5],
+        matrix[8],
         matrix[2][3],
         matrix[3][0],
         matrix[3][1],

@@ -2,6 +2,7 @@ const std = @import("std");
 const zmt = @import("zmath");
 const zdl = @import("zsdl");
 const zph = @import("zbullet");
+const phy = @import("../systems/physics.zig");
 const csm = @import("../systems/csmath.zig");
 const sys = @import("../systems/system.zig");
 const euc = @import("../types/euclid.zig");
@@ -69,7 +70,6 @@ pub const OGD = packed struct {
 
 /// Determines control type, paint type, and positioning
 pub fn createCube(ogd: OGD, cube_index: u8) !Cube {
-    _ = cube_index;
     var cube: Cube = .{
         .cube_data = (@as(u8, ogd.paint) << 3) + (ogd.type) + (@as(u8, ogd.state) << 6),
         .euclid = .{ .position = pos.Position.init(.{}, .{
@@ -84,13 +84,13 @@ pub fn createCube(ogd: OGD, cube_index: u8) !Cube {
         .mesh_index = try msh.meshes.fetch(0),
     };
 
-    cube.phys_body = sys.addPhysCube(&cube);
+    cube.phys_body = phy.addPhysCube(&cube, cube_index);
     return cube;
 }
 
 /// Destroys cube and frees resources
 pub fn destroyCube(cube: *Cube) void {
-    sys.remPhysCube(cube);
+    phy.remPhysCube(cube);
     msh.meshes.release(0);
 }
 
@@ -99,7 +99,7 @@ pub const aColors = [_]csm.Vec4{
     csm.Vec4{ 0.2, 0.7, 0.2, 1.0 }, //ground
     csm.Vec4{ 0.7, 0.6, 0.2, 1.0 }, //wall
     csm.Vec4{ 0.2, 0.1, 0.3, 1.0 }, //obelisk
-    csm.Vec4{ 0.1, 0.1, 0.5, 0.4 }, //glass
+    csm.Vec4{ 0.6, 0.6, 0.8, 0.4 }, //glass
     csm.Vec4{ 0.1, 0.3, 0.7, 1.0 }, //player
     csm.Vec4{ 0.8, 0.2, 0.1, 1.0 }, //enemy
     csm.Vec4{ 1.0, 1.0, 0.3, 1.0 }, //coin
@@ -111,7 +111,7 @@ pub const bColors = [_]csm.Vec4{
     csm.Vec4{ 0.1, 0.35, 0.1, 1.0 }, //ground
     csm.Vec4{ 0.3, 0.3, 0.1, 1.0 }, //wall
     csm.Vec4{ 0.2, 0.1, 0.3, 1.0 }, //obelisk
-    csm.Vec4{ 0.05, 0.05, 0.5, 0.7 }, //glass
+    csm.Vec4{ 0.3, 0.3, 0.4, 0.7 }, //glass
     csm.Vec4{ 0.05, 0.15, 0.35, 1.0 }, //player
     csm.Vec4{ 0.5, 0.1, 0.1, 1.0 }, //enemy
     csm.Vec4{ 0.7, 0.7, 0.1, 1.0 }, //coin
