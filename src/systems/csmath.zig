@@ -63,22 +63,6 @@ pub fn decomposeTransform(body: zph.Body, rotation: *zmt.Quat, position: *Vec3) 
     // Get the transform from Bullet and into 't'
     body.getGraphicsWorldTransform(&temp);
 
-    std.debug.print("[{d:.3}, {d:.3}, {d:.3}]\n[{d:.3}, {d:.3}, {d:.3}]\n" ++
-        "[{d:.3}, {d:.3}, {d:.3}]\n[{d:.3}, {d:.3}, {d:.3}]\n\n", .{
-        temp[0],
-        temp[1],
-        temp[2],
-        temp[3],
-        temp[4],
-        temp[5],
-        temp[6],
-        temp[7],
-        temp[8],
-        temp[9],
-        temp[10],
-        temp[11],
-    });
-
     rotation.* = zmt.util.getRotationQuat(zmt.loadMat43(&temp));
     position.* = Vec3{ temp[9], temp[10], temp[11] };
 }

@@ -23,7 +23,7 @@ fn addMesh(mesh_id: u32) Mesh {
     var mesh: Mesh = .{
         .id = mesh_id,
     };
-    var material_index = mat.materials.fetch(0) catch |err| {
+    var material_index = mat.materials.fetch(mesh_id) catch |err| {
         std.log.err("Material fetching errored: {}", .{err});
         return mesh;
     };
@@ -59,6 +59,7 @@ fn addMesh(mesh_id: u32) Mesh {
     zgl.enableVertexAttribArray(0);
     _ = rnd.checkGLErrorState("Setting Attribute");
 
+    mesh.subscribers = 1;
     return mesh;
 }
 fn remMesh(mesh: *Mesh) void {

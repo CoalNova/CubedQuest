@@ -13,8 +13,9 @@ pub var materials = asc.AssetCollection(Material, addMaterial, remMaterial){};
 fn addMaterial(material_id: u32) Material {
     var material = Material{
         .id = material_id,
+        .subscribers = 1,
     };
-    material.shader_index = shd.shaders.fetch(0) catch |err|
+    material.shader_index = shd.shaders.fetch(material_id) catch |err|
         {
         std.log.err("Material failed to get shader: {}", .{err});
         return material;

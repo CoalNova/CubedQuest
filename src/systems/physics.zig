@@ -1,5 +1,7 @@
 const std = @import("std");
 const zpy = @import("zbullet");
+const zmt = @import("zmath");
+const csm = @import("../systems/csmath.zig");
 const sys = @import("../systems/system.zig");
 const cbe = @import("../objects/cube.zig");
 const tpe = @import("../types/types.zig");
@@ -21,16 +23,19 @@ pub fn addPhysCube(cube: *cbe.Cube, index: u8) zpy.Body {
     const cube_type = @as(cbe.CubeType, @enumFromInt(cube.cube_data & 7));
     const mass: f32 = if (cube_type == cbe.CubeType.player or cube_type == cbe.CubeType.enemy) 1.0 else 0.0;
 
+    std.debug.print("CUBE: {} MASS {}\n", .{ cube_type, mass });
+
     const axial = cube.euclid.position.getAxial();
     const scale = tpe.Float3{
         .x = cube.euclid.scale.x * 0.5,
         .y = cube.euclid.scale.y * 0.5,
         .z = cube.euclid.scale.z * 0.5,
     };
+    const rotform = csm.convQuatToMat4(cube.euclid.rotation);
     const initial_phys_cube_transform = [_]f32{
-        1.0, 0.0, 0.0, // orientation
-        0.0, 1.0, 0.0,
-        0.0, 0.0, 1.0,
+        rotform[0][0], rotform[0][1], rotform[0][2], // orientation
+        rotform[1][0], rotform[1][1], rotform[1][2],
+        rotform[2][0], rotform[2][1], rotform[2][2],
         axial.x, axial.y, axial.z, // translation
     };
     const box_cube = zpy.initBoxShape(&scale.toArray());

@@ -40,6 +40,7 @@ pub fn AssetCollection(
             try this._collection.append(asset);
             return this._collection.items.len - 1;
         }
+
         pub fn release(this: *Self, asset_id: u32) void {
             for (this._collection.items) |*a| {
                 if (a.id == asset_id)

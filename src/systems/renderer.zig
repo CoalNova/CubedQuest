@@ -13,18 +13,41 @@ const shd = @import("../assets/shader.zig");
 const cbe = @import("../objects/cube.zig");
 
 /// The Rendering Function
-pub fn render() void {
-    // clear
-    zgl.clear(zgl.COLOR_BUFFER_BIT | zgl.DEPTH_BUFFER_BIT);
+pub fn render() !void {
+
     // for all windows (just one)
     for (wnd.windows.items) |*w| {
+        try zdl.gl.makeCurrent(w.sdl_window, w.gl_context);
+
         // get and set viewport from window bounds (to fix resizing issues)
         zdl.Window.getSize(w.sdl_window, &w.size.x, &w.size.y) catch unreachable;
+        // clear
+        zgl.clear(zgl.COLOR_BUFFER_BIT | zgl.DEPTH_BUFFER_BIT);
         zgl.viewport(0, 0, w.size.x, w.size.y);
         // calc camera matrices
         w.camera.calculateMatrices(w);
+        //draw the sky
+        {
+            const sky_mesh: *msh.Mesh = msh.meshes.peek(skymesh);
+            const sky_material: *mat.Material = mat.materials.peek(sky_mesh.material_index);
+            const sky_shader: *shd.Shader = shd.shaders.peek(sky_material.shader_index);
+
+            zgl.useProgram(sky_shader.program);
+            if (checkGLErrorState("Use Program")) std.debug.print("Program Name:{d}\n", .{sky_shader.program});
+
+            //bind mesh
+            zgl.bindVertexArray(sky_mesh.vao);
+            if (checkGLErrorState("Bind Vertex Array")) std.debug.print("VAO Address:{d}\n", .{sky_mesh.vao});
+
+            zgl.uniform3fv(sky_shader.bse_name, 1, &lvl.active_level.sky_color.toArray());
+            if (checkGLErrorState("Sky Sun Uniform Assignment")) std.debug.print("Uniform Address:{d} for program {d}\n", .{ sky_shader.bse_name, sky_shader.program });
+
+            //draw
+            zgl.drawElements(0, 1, zgl.UNSIGNED_INT, null);
+            _ = checkGLErrorState("Draw Elements");
+        }
         // for each cube
-        for (lvl.active_level.cubes) |cube| {
+        for (lvl.active_level.cubes.items) |cube| {
             const mesh: *msh.Mesh = msh.meshes.peek(cube.mesh_index);
             const material: *mat.Material = mat.materials.peek(mesh.material_index);
             const shader: *shd.Shader = shd.shaders.peek(material.shader_index);
@@ -133,4 +156,14 @@ pub fn getGLErrorString(gl_error_enum_value: u32) []const u8 {
         },
     }
     unreachable;
+}
+
+var skymesh: usize = 0;
+
+pub fn initSky() !void {
+    skymesh = try msh.meshes.fetch(1);
+}
+
+pub fn deinitSky() void {
+    msh.meshes.release(1);
 }

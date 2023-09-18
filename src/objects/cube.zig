@@ -54,16 +54,14 @@ pub const CubeState = enum(u2) {
 };
 
 pub const OGD = packed struct {
-    state: u2 = 3,
-    paint: u3 = 0,
-    type: u3 = 0,
+    data: u8 = 3 << 6, //state, paint, type
     pos_x: u8 = 128, //-128, *0.5f
     pos_y: u8 = 128,
     pos_z: u8 = 128,
-    rot_x: u3 = 0, //division of rotation, in increments of pirad/4 for full axis
+    rot_x: u3 = 0, //division of rotation, in increments of pi rd/4 for full axis
     rot_y: u3 = 0,
     rot_z: u3 = 0,
-    sca_x: u3 = 0, //2 ^ (x) (creates 1, 2, 4, 8, etc)
+    sca_x: u3 = 0, //2 ^ (x) (creates 1, 2, 4, 8, 16, 32, 64, 128)
     sca_y: u3 = 0,
     sca_z: u3 = 0,
 };
@@ -71,7 +69,7 @@ pub const OGD = packed struct {
 /// Determines control type, paint type, and positioning
 pub fn createCube(ogd: OGD, cube_index: u8) !Cube {
     var cube: Cube = .{
-        .cube_data = (@as(u8, ogd.paint) << 3) + (ogd.type) + (@as(u8, ogd.state) << 6),
+        .cube_data = ogd.data,
         .euclid = .{ .position = pos.Position.init(.{}, .{
             .x = (@as(f32, @floatFromInt(ogd.pos_x)) - 128.0) * 0.5,
             .y = (@as(f32, @floatFromInt(ogd.pos_y)) - 128.0) * 0.5,
@@ -80,7 +78,11 @@ pub fn createCube(ogd: OGD, cube_index: u8) !Cube {
             .x = std.math.pow(f32, 2.0, @as(f32, @floatFromInt(ogd.sca_x))),
             .y = std.math.pow(f32, 2.0, @as(f32, @floatFromInt(ogd.sca_y))),
             .z = std.math.pow(f32, 2.0, @as(f32, @floatFromInt(ogd.sca_z))),
-        } },
+        }, .rotation = csm.convEulToQuat(csm.Vec3{
+            (std.math.pi / 8.0) * @as(f32, @floatFromInt(ogd.rot_x)),
+            (std.math.pi / 8.0) * @as(f32, @floatFromInt(ogd.rot_y)),
+            (std.math.pi / 8.0) * @as(f32, @floatFromInt(ogd.rot_z)),
+        }) },
         .mesh_index = try msh.meshes.fetch(0),
     };
 

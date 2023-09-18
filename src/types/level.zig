@@ -11,69 +11,48 @@ const pst = @import("../types/position.zig");
 
 /// Level Struct
 /// TODO/MEBE figure out how this is gonna work
-pub const Level = struct {
+pub const RunningLevel = struct {
     name: []const u8 = "level",
-    cubes: []cbe.Cube = undefined,
+    cubes: std.ArrayList(cbe.Cube) = undefined,
     sky_color: tpe.Float4 = tpe.Float4.init(1, 1, 1, 1),
-    light_color: tpe.Float4 = tpe.Float4.init(1, 1, 1, 1),
+    sun_color: tpe.Float4 = tpe.Float4.init(1, 1, 1, 1),
     amb_color: tpe.Float4 = tpe.Float4.init(1, 1, 1, 1),
     sun_direction: tpe.Float3 = tpe.Float3.init(-0.2, 0.3, -0.5),
+    start_time: std.time.Instant = undefined,
+    end_time: std.time.Instant = undefined,
+    cur_score: u8 = 0,
+    max_score: u8 = 0,
+    lvl_state: LevelState = LevelState.degenerateded,
+};
+
+pub const Level = struct {
+    name: []u8 = undefined,
+    ogds: []cbe.OGD = undefined,
+    link_list: []u8 = undefined,
+    sky_color: [4]u8 = undefined,
+    amb_color: [4]u8 = undefined,
+    sun_color: [4]u8 = undefined,
+    sun_direction: [3]u8 = undefined,
 };
 
 /// Level State
 /// The indication of where we are in playing the level
 pub const LevelState = enum {
-    loaded,
+    /// Level is not in an interactable state, and has been cleared of data
+    degenerateded,
+    /// Level is loaded, generated, and prepped for play
+    generated,
+    /// Level is being played
     playing,
+    /// Level play state is paused, likely in menu
     paused,
+    /// Failed
     failed,
+    /// Succeeded
     succeeded,
 };
 
-pub var active_level: Level = undefined;
-
-pub fn loadDebugLevel() !Level {
-    var level: Level = .{};
-
-    level.name = "debug";
-    level.cubes = try sys.allocator.alloc(cbe.Cube, 3);
-    var ogd = cbe.OGD{
-        .type = @intFromEnum(cbe.CubeType.player),
-        .paint = @intFromEnum(cbe.CubePaint.player),
-        .pos_z = 136,
-    };
-    var cube = try cbe.createCube(ogd, 0);
-    level.cubes[0] = cube;
-    ogd = cbe.OGD{
-        .type = @intFromEnum(cbe.CubeType.ground),
-        .paint = @intFromEnum(cbe.CubePaint.ground),
-        .pos_z = 122,
-        .sca_x = 4,
-        .sca_y = 3,
-        .sca_z = 0,
-    };
-    cube = try cbe.createCube(ogd, 1);
-    level.cubes[1] = cube;
-    ogd = cbe.OGD{
-        .type = @intFromEnum(cbe.CubeType.ground),
-        .paint = @intFromEnum(cbe.CubePaint.glass),
-        .pos_z = 122,
-        .pos_x = 129,
-        .pos_y = 129,
-        .sca_z = 2,
-    };
-    cube = try cbe.createCube(ogd, 2);
-    level.cubes[2] = cube;
-
-    const camera = &wnd.windows.items[0].camera;
-    camera.euclid.position.addAxial(.{ -2.0, -4.0, 513.0 });
-    camera.euclid.rotation = zmt.qmul(wnd.windows.items[0].camera.euclid.rotation, csm.convEulToQuat(
-        csm.Vec3{ 0.0, 0.3, 0.3 },
-    ));
-    camera.field_of_view = 1.4;
-
-    return level;
-}
+pub var active_level: RunningLevel = undefined;
 
 /// Generate level from level file
 /// TODO de-confuse the process, leave level structs in as separate entities?
@@ -107,20 +86,126 @@ pub fn loadLevel(filepath: []const u8) !Level {
 }
 
 pub fn generateLevel(level: Level) !void {
-    _ = level;
+    // unload active, just in case
+    if (active_level.lvl_state != LevelState.degenerateded)
+        unloadActiveLevel();
+    var active = RunningLevel{};
+    active.amb_color.fromUIntArray(level.amb_color, 255.0);
+    active.sun_color.fromUIntArray(level.sun_color, 255.0);
+    active.sky_color.fromUIntArray(level.sky_color, 255.0);
+    active.cubes = try sys.allocator.alloc(cbe.Cube, level.ogds.len);
+    for (level.ogds, 0..) |ogd, i| {
+        active.cubes.appendAssumeCapacity(cbe.createCube(ogd, i));
+        if ((ogd.data & 7) == @intFromEnum(cbe.CubeType.coin))
+            active.max_score += 1;
+    }
+    active.sun_direction.fromUIntArray(level.sun_direction, 255.0);
+    active.lvl_state = LevelState.generated;
 }
 
+pub fn convertActive() Level {}
+
 pub fn saveLevel(level: Level) !void {
-    //TODO process cubes back -> front for proper transparency blending
+    //TODO process cubes back -> front for proper transparency blending?
+
     _ = level;
 }
 
 /// Unloads current level and deletes
 pub fn unloadActiveLevel() void {
-    for (active_level.cubes) |*cube|
+    for (active_level.cubes.items) |*cube|
         cbe.destroyCube(cube);
 
-    // this *should* panic is level cubes is not allocated,
-    // but that's probably a failed state we'd want to catch
-    sys.allocator.free(active_level.cubes);
+    active_level.cubes.deinit();
+    active_level.lvl_state = LevelState.degenerateded;
+}
+
+///Loads a debug first level, for testing and such
+pub fn loadDebugLevel() !RunningLevel {
+    var level: RunningLevel = .{};
+
+    level.name = "Level 1";
+
+    level.cubes = std.ArrayList(cbe.Cube).init(sys.allocator);
+
+    var ogd = cbe.OGD{
+        .data = @intFromEnum(cbe.CubeType.player) +
+            (@as(u8, @intFromEnum(cbe.CubePaint.player)) << 3),
+        .pos_z = 130,
+        .pos_x = 118,
+    };
+    try level.cubes.append(try cbe.createCube(ogd, 0));
+    ogd = cbe.OGD{
+        .data = @intFromEnum(cbe.CubeType.ground) +
+            (@as(u8, @intFromEnum(cbe.CubePaint.ground)) << 3),
+        .pos_z = 126,
+        .sca_x = 4,
+        .sca_y = 4,
+        .sca_z = 0,
+    };
+    try level.cubes.append(try cbe.createCube(ogd, 1));
+
+    ogd = cbe.OGD{
+        .data = @intFromEnum(cbe.CubeType.ground) +
+            (@as(u8, @intFromEnum(cbe.CubePaint.wall)) << 3),
+        .pos_y = 144,
+        .sca_x = 4,
+        .sca_z = 1,
+    };
+    try level.cubes.append(try cbe.createCube(ogd, 2));
+    ogd = cbe.OGD{
+        .data = @intFromEnum(cbe.CubeType.ground) +
+            (@as(u8, @intFromEnum(cbe.CubePaint.wall)) << 3),
+        .pos_y = 112,
+        .sca_x = 4,
+        .sca_z = 1,
+    };
+    try level.cubes.append(try cbe.createCube(ogd, 3));
+
+    ogd = cbe.OGD{
+        .data = @intFromEnum(cbe.CubeType.ground) +
+            (@as(u8, @intFromEnum(cbe.CubePaint.wall)) << 3),
+        .pos_x = 144,
+        .sca_y = 4,
+        .sca_z = 1,
+    };
+    try level.cubes.append(try cbe.createCube(ogd, 4));
+
+    ogd = cbe.OGD{
+        .data = @intFromEnum(cbe.CubeType.ground) +
+            (@as(u8, @intFromEnum(cbe.CubePaint.wall)) << 3),
+        .pos_x = 112,
+        .sca_y = 4,
+        .sca_z = 1,
+    };
+    try level.cubes.append(try cbe.createCube(ogd, 5));
+
+    ogd = cbe.OGD{
+        .data = @intFromEnum(cbe.CubeType.ground) +
+            (@as(u8, @intFromEnum(cbe.CubePaint.glass)) << 3),
+        .pos_z = 129,
+        .sca_y = 1,
+        .sca_x = 1,
+        .sca_z = 1,
+        .rot_z = 6,
+    };
+    try level.cubes.append(try cbe.createCube(ogd, 6));
+
+    ogd = cbe.OGD{
+        .data = @intFromEnum(cbe.CubeType.enemy) +
+            (@as(u8, @intFromEnum(cbe.CubePaint.enemy)) << 3),
+        .pos_z = 130,
+        .pos_x = 138,
+    };
+    try level.cubes.append(try cbe.createCube(ogd, 7));
+
+    const camera = &wnd.windows.items[0].camera;
+    camera.euclid.position.addAxial(.{ 0.0, -8.0, 522.0 });
+    camera.euclid.rotation = zmt.qmul(wnd.windows.items[0].camera.euclid.rotation, csm.convEulToQuat(
+        csm.Vec3{ 0.0, 0.8, 0.0 },
+    ));
+    camera.field_of_view = 1.6;
+    level.sky_color = tpe.Float4.init(0.2, 0.3, 0.8, 1.0);
+
+    return level;
 }

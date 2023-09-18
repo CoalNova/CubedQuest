@@ -77,6 +77,9 @@ pub fn init() !void {
         .{ 800, 600 },
     );
 
+    //init sky
+    try rnd.initSky();
+
     // set engine flags to everything we need
     setStateOn(EngineState.alive);
     setStateOn(EngineState.events);
@@ -87,6 +90,8 @@ pub fn init() !void {
 pub fn deinit() void {
     //unload active level, deleting assets
     lvl.unloadActiveLevel();
+
+    rnd.deinitSky();
 
     //
     msh.meshes.deinit();
@@ -114,11 +119,11 @@ pub fn proc() !bool {
     //Run through loaded items for events
     if (getState(EngineState.playing)) {
         const cubes = lvl.active_level.cubes;
-        for (0..cubes.len) |c_i| {
-            switch (@as(cbe.CubeType, @enumFromInt((cubes[c_i].cube_data) & 7))) {
+        for (cubes.items) |*c| {
+            switch (@as(cbe.CubeType, @enumFromInt((c.cube_data) & 7))) {
                 cbe.CubeType.ground => {},
                 cbe.CubeType.player => {
-                    cnt.procPlayer(&cubes[c_i]);
+                    cnt.procPlayer(c);
                 },
                 cbe.CubeType.enemy => {},
                 cbe.CubeType.coin => {},
@@ -135,7 +140,7 @@ pub fn proc() !bool {
 
     //render
     if (getState(EngineState.render))
-        rnd.render();
+        try rnd.render();
 
     //have a merry old time
     zdl.delay(15);
