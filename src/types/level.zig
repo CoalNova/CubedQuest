@@ -9,11 +9,12 @@ const pos = @import("../types/position.zig");
 const wnd = @import("../types/window.zig");
 const pst = @import("../types/position.zig");
 
-/// Level Struct
+/// Active Level Struct
 /// TODO/MEBE figure out how this is gonna work
 pub const RunningLevel = struct {
     name: []const u8 = "level",
     cubes: std.ArrayList(cbe.Cube) = undefined,
+    links: std.ArrayList(Link) = undefined,
     sky_color: tpe.Float4 = tpe.Float4.init(1, 1, 1, 1),
     sun_color: tpe.Float4 = tpe.Float4.init(1, 1, 1, 1),
     amb_color: tpe.Float4 = tpe.Float4.init(1, 1, 1, 1),
@@ -25,6 +26,7 @@ pub const RunningLevel = struct {
     lvl_state: LevelState = LevelState.degenerateded,
 };
 
+/// Serializable Level Struct
 pub const Level = struct {
     name: []u8 = undefined,
     ogds: []cbe.OGD = undefined,
@@ -33,6 +35,19 @@ pub const Level = struct {
     amb_color: [4]u8 = undefined,
     sun_color: [4]u8 = undefined,
     sun_direction: [3]u8 = undefined,
+};
+
+pub const LinkType = enum(u8) {
+    repeating = 0b0001,
+    player = 0b0010,
+    enemy = 0b0100,
+};
+
+/// Link Struct
+pub const Link = struct {
+    source: u8 = 0,
+    link_type: u8 = 0,
+    destination: u8 = 0,
 };
 
 /// Level State
@@ -127,17 +142,16 @@ pub fn loadDebugLevel() !RunningLevel {
     level.name = "Level 1";
 
     level.cubes = std.ArrayList(cbe.Cube).init(sys.allocator);
+    level.links = std.ArrayList(Link).init(sys.allocator);
 
     var ogd = cbe.OGD{
-        .data = @intFromEnum(cbe.CubeType.player) +
-            (@as(u8, @intFromEnum(cbe.CubePaint.player)) << 3),
+        .cube_type = @intFromEnum(cbe.CubeType.player),
+        .cube_paint = @intFromEnum(cbe.CubePaint.player),
         .pos_z = 130,
         .pos_x = 118,
     };
     try level.cubes.append(try cbe.createCube(ogd, 0));
     ogd = cbe.OGD{
-        .data = @intFromEnum(cbe.CubeType.ground) +
-            (@as(u8, @intFromEnum(cbe.CubePaint.ground)) << 3),
         .pos_z = 126,
         .sca_x = 4,
         .sca_y = 4,
@@ -146,16 +160,14 @@ pub fn loadDebugLevel() !RunningLevel {
     try level.cubes.append(try cbe.createCube(ogd, 1));
 
     ogd = cbe.OGD{
-        .data = @intFromEnum(cbe.CubeType.ground) +
-            (@as(u8, @intFromEnum(cbe.CubePaint.wall)) << 3),
+        .cube_paint = @intFromEnum(cbe.CubePaint.wall),
         .pos_y = 144,
         .sca_x = 4,
         .sca_z = 1,
     };
     try level.cubes.append(try cbe.createCube(ogd, 2));
     ogd = cbe.OGD{
-        .data = @intFromEnum(cbe.CubeType.ground) +
-            (@as(u8, @intFromEnum(cbe.CubePaint.wall)) << 3),
+        .cube_paint = @intFromEnum(cbe.CubePaint.wall),
         .pos_y = 112,
         .sca_x = 4,
         .sca_z = 1,
@@ -163,8 +175,7 @@ pub fn loadDebugLevel() !RunningLevel {
     try level.cubes.append(try cbe.createCube(ogd, 3));
 
     ogd = cbe.OGD{
-        .data = @intFromEnum(cbe.CubeType.ground) +
-            (@as(u8, @intFromEnum(cbe.CubePaint.wall)) << 3),
+        .cube_paint = @intFromEnum(cbe.CubePaint.wall),
         .pos_x = 144,
         .sca_y = 4,
         .sca_z = 1,
@@ -172,8 +183,7 @@ pub fn loadDebugLevel() !RunningLevel {
     try level.cubes.append(try cbe.createCube(ogd, 4));
 
     ogd = cbe.OGD{
-        .data = @intFromEnum(cbe.CubeType.ground) +
-            (@as(u8, @intFromEnum(cbe.CubePaint.wall)) << 3),
+        .cube_paint = @intFromEnum(cbe.CubePaint.wall),
         .pos_x = 112,
         .sca_y = 4,
         .sca_z = 1,
@@ -181,8 +191,7 @@ pub fn loadDebugLevel() !RunningLevel {
     try level.cubes.append(try cbe.createCube(ogd, 5));
 
     ogd = cbe.OGD{
-        .data = @intFromEnum(cbe.CubeType.ground) +
-            (@as(u8, @intFromEnum(cbe.CubePaint.glass)) << 3),
+        .cube_paint = @intFromEnum(cbe.CubePaint.glass),
         .pos_z = 129,
         .sca_y = 1,
         .sca_x = 1,
@@ -192,15 +201,15 @@ pub fn loadDebugLevel() !RunningLevel {
     try level.cubes.append(try cbe.createCube(ogd, 6));
 
     ogd = cbe.OGD{
-        .data = @intFromEnum(cbe.CubeType.enemy) +
-            (@as(u8, @intFromEnum(cbe.CubePaint.enemy)) << 3),
+        .cube_type = @intFromEnum(cbe.CubeType.enemy),
+        .cube_paint = @intFromEnum(cbe.CubePaint.enemy),
         .pos_z = 130,
         .pos_x = 138,
     };
     try level.cubes.append(try cbe.createCube(ogd, 7));
 
     const camera = &wnd.windows.items[0].camera;
-    camera.euclid.position.addAxial(.{ 0.0, -8.0, 522.0 });
+    camera.euclid.position.addAxial(.{ .x = 0.0, .y = -8.0, .z = 522.0 });
     camera.euclid.rotation = zmt.qmul(wnd.windows.items[0].camera.euclid.rotation, csm.convEulToQuat(
         csm.Vec3{ 0.0, 0.8, 0.0 },
     ));

@@ -24,20 +24,6 @@ pub fn main() !void {
     // Process Engine Parts
     while (try sys.proc()) {
 
-        //DEBUG camera rotation to find
-        if (evt.getInputStay(.{ .input_id = @intFromEnum(zdl.Scancode.up) }))
-            wnd.windows.items[0].camera.euclid.position.addAxial(.{ 0.0, 0.01, 0.0 });
-        if (evt.getInputStay(.{ .input_id = @intFromEnum(zdl.Scancode.down) }))
-            wnd.windows.items[0].camera.euclid.position.addAxial(.{ 0.0, -0.01, 0.0 });
-        if (evt.getInputStay(.{ .input_id = @intFromEnum(zdl.Scancode.left) }))
-            wnd.windows.items[0].camera.euclid.position.addAxial(.{ 0.01, 0.0, 0.0 });
-        if (evt.getInputStay(.{ .input_id = @intFromEnum(zdl.Scancode.right) }))
-            wnd.windows.items[0].camera.euclid.position.addAxial(.{ -0.01, 0.0, 0.0 });
-
-        if (evt.getInputStay(.{ .input_id = @intFromEnum(zdl.Scancode.rshift) }))
-            wnd.windows.items[0].camera.euclid.position.addAxial(.{ 0.0, 0.0, 0.01 });
-        if (evt.getInputStay(.{ .input_id = @intFromEnum(zdl.Scancode.rctrl) }))
-            wnd.windows.items[0].camera.euclid.position.addAxial(.{ 0.0, 0.0, -0.01 });
         //DEBUG quit
         if (evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.escape) }))
             sys.setStateOff(sys.EngineState.alive);

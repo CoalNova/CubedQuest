@@ -39,7 +39,9 @@ pub fn render() !void {
             zgl.bindVertexArray(sky_mesh.vao);
             if (checkGLErrorState("Bind Vertex Array")) std.debug.print("VAO Address:{d}\n", .{sky_mesh.vao});
 
-            zgl.uniform3fv(sky_shader.bse_name, 1, &lvl.active_level.sky_color.toArray());
+            const sky_color = lvl.active_level.sky_color.toArray();
+
+            zgl.uniform4fv(sky_shader.bse_name, 1, &sky_color);
             if (checkGLErrorState("Sky Sun Uniform Assignment")) std.debug.print("Uniform Address:{d} for program {d}\n", .{ sky_shader.bse_name, sky_shader.program });
 
             //draw
@@ -75,9 +77,9 @@ pub fn render() !void {
             if (checkGLErrorState("MVP Matrix Uniform Assignment")) std.debug.print("Uniform Address:{d}\n", .{shader.mtx_name});
 
             var c = tpe.Float4{};
-            c.fromSIMD(cbe.aColors[(cube.cube_data >> 3) & 7]);
+            c.fromSIMD(cbe.aColors[@intFromEnum(cube.cube_paint)]);
             const a_color = c.toArray();
-            c.fromSIMD(cbe.bColors[(cube.cube_data >> 3) & 7]);
+            c.fromSIMD(cbe.bColors[@intFromEnum(cube.cube_paint)]);
             const b_color = c.toArray();
 
             const sun_color: [4]f32 = lvl.active_level.sky_color.toArray();

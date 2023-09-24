@@ -18,12 +18,7 @@ var physics_cube_shape: zpy.BoxShape = undefined;
 /// TODO interpolate rotation into 3x3 matrix... maybe?
 /// TODO figure out why no collision
 pub fn addPhysCube(cube: *cbe.Cube, index: u8) zpy.Body {
-
-    //
-    const cube_type = @as(cbe.CubeType, @enumFromInt(cube.cube_data & 7));
-    const mass: f32 = if (cube_type == cbe.CubeType.player or cube_type == cbe.CubeType.enemy) 1.0 else 0.0;
-
-    std.debug.print("CUBE: {} MASS {}\n", .{ cube_type, mass });
+    const mass: f32 = if (cube.cube_type == cbe.CubeType.player or cube.cube_type == cbe.CubeType.enemy) 1.0 else 0.0;
 
     const axial = cube.euclid.position.getAxial();
     const scale = tpe.Float3{

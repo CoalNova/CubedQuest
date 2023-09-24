@@ -16,6 +16,8 @@ pub fn initalizeGL() !void {
     try zgl.loadCoreProfile(rnd.getProcAddress, 3, 3);
 
     zgl.polygonMode(zgl.FRONT_AND_BACK, zgl.FILL); //FILL
+    zgl.enable(zgl.CULL_FACE);
+    zgl.cullFace(zgl.BACK);
     zgl.enable(zgl.DEPTH_TEST);
     zgl.enable(zgl.BLEND);
     zgl.blendFunc(zgl.SRC_ALPHA, zgl.ONE_MINUS_SRC_ALPHA);
@@ -23,6 +25,7 @@ pub fn initalizeGL() !void {
     zgl.clearColor(0.01, 0.0, 0.02, 1.0);
 
     zgl.getIntegerv(zgl.MAX_ARRAY_TEXTURE_LAYERS, &max_tex_array_layers);
+
     zgl.getIntegerv(zgl.MAX_TEXTURE_IMAGE_UNITS, &max_tex_binding_points);
 }
 

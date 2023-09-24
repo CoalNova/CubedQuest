@@ -186,7 +186,7 @@ const cube_g_shader =
     \\#version 330 core
     \\
     \\layout(points) in; 
-    \\layout(triangle_strip, max_vertices = 36) out; 
+    \\layout(triangle_strip, max_vertices = 72) out; 
     \\
     \\out vec3 fragNormal;
     \\out float fragU;
@@ -255,6 +255,15 @@ const cube_g_shader =
     \\
     \\void main()
     \\{ 
+    \\  //draw inside
+    \\  BuildFace(3, 0, 2, 1, vec3(0.0, 1.0f, 0.0f),   stride.zx);
+    \\	BuildFace(2, 5, 7, 0, vec3(1.0f, 0.0f, 0.0f),  stride.zy); 
+    \\	BuildFace(6, 1, 3, 4, vec3(-1.0f, 0.0f, 0.0f), stride.yz);
+    \\	BuildFace(6, 2, 7, 3, vec3(0.0f, 0.0f, -1.0f), stride.xy); 
+    \\	BuildFace(1, 5, 0, 4, vec3(0.0f, 0.0f, 1.0f),  stride.yx);
+    \\	BuildFace(7, 4, 6, 5, vec3(0.0f, -1.0f, 0.0f), stride.xz);
+    \\  
+    \\  //draw outside
     \\	BuildFace(0, 3, 2, 1, vec3(0.0, 1.0f, 0.0f),   stride.zx);
     \\	BuildFace(5, 2, 7, 0, vec3(1.0f, 0.0f, 0.0f),  stride.zy); 
     \\	BuildFace(1, 6, 3, 4, vec3(-1.0f, 0.0f, 0.0f), stride.yz);
@@ -283,7 +292,7 @@ const sky_f_shader =
     \\
     \\void main() 
     \\{
-    \\  sun_color = vec4(0.2f, 0.3f, 0.8f, 1.0f);
+    \\  sun_color = base;
     \\}
 ;
 

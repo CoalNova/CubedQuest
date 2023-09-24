@@ -152,6 +152,11 @@ pub inline fn rayPlane(
     return false;
 }
 
+pub inline fn normalizeVec3(vec3: Vec3) Vec3 {
+    const sum = @fabs(vec3[0]) + @fabs(vec3[1]) + @fabs(vec3[2]);
+    return Vec3{ vec3[0] / sum, vec3[1] / sum, vec3[2] / sum };
+}
+
 /// Print Matrix using debug.print
 pub fn printMatrix(matrix: zmt.Mat) void {
     std.debug.print(

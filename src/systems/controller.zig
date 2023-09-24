@@ -6,6 +6,7 @@ const evt = @import("../systems/event.zig");
 const cbe = @import("../objects/cube.zig");
 const tpe = @import("../types/types.zig");
 const wnd = @import("../types/window.zig");
+const lvl = @import("../types/level.zig");
 
 /// An Associated Event.Input Map
 const InputMap = struct {
@@ -57,6 +58,43 @@ pub fn procPlayer(cube: *cbe.Cube) void {
         euler[1],
         euler[0],
         euler[2],
+    });
+
+    var rotation: zmt.Quat = undefined;
+    var position: csm.Vec3 = undefined;
+    csm.decomposeTransform(cube.phys_body, &rotation, &position);
+    cube.euclid.rotation = rotation;
+    cube.euclid.position.setAxial(tpe.Float3.init(position[0], position[1], position[2]));
+}
+
+pub fn procEnemy(cube: *cbe.Cube) void {
+    // a rotational magnitude
+    const rot_mag = 7.0;
+    var euler = csm.Vec3{ 0, 0, 0 };
+    const self = cube.euclid.position.getAxial();
+    target_block: {
+        // find if linked a target
+        for (lvl.active_level.links.items) |link| {
+            if (link.source == cube.self_index) {
+                const target = lvl.active_level.cubes.items[link.destination].euclid.position.getAxial();
+                euler = csm.normalizeVec3(csm.Vec3{ self.x - target.x, self.y - target.y, 0 });
+                break :target_block;
+            }
+        }
+        // else find player explicitly
+        for (lvl.active_level.cubes.items) |c| {
+            if (c.cube_type == cbe.CubeType.player) {
+                const target = c.euclid.position.getAxial();
+                euler = csm.normalizeVec3(csm.Vec3{ self.x - target.x, self.y - target.y, 0 });
+                break :target_block;
+            }
+        }
+    }
+
+    cube.phys_body.applyBodyTorque(&[_]f32{
+        euler[1] * rot_mag * 1.3,
+        -euler[0] * rot_mag * 1.3,
+        euler[2] * rot_mag * 1.3,
     });
 
     var rotation: zmt.Quat = undefined;

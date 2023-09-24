@@ -14,9 +14,12 @@ const tpe = @import("../types/types.zig");
 
 /// Cube
 pub const Cube = struct {
+    cube_type: CubeType = CubeType.ground,
+    cube_paint: CubePaint = CubePaint.ground,
+    cube_state: u2 = 3, //enabled and active
     euclid: euc.Euclid = .{},
+    self_index: u8 = 0,
     mesh_index: usize = 0,
-    cube_data: u8 = 3 << 6, //part of an in-vain attempt to squeeze into 64 bytes (cache line)
     phys_body: zph.Body = undefined,
 };
 
@@ -54,7 +57,9 @@ pub const CubeState = enum(u2) {
 };
 
 pub const OGD = packed struct {
-    data: u8 = 3 << 6, //state, paint, type
+    cube_type: u3 = 0,
+    cube_paint: u3 = 0,
+    cube_state: u2 = 3,
     pos_x: u8 = 128, //-128, *0.5f
     pos_y: u8 = 128,
     pos_z: u8 = 128,
@@ -69,7 +74,9 @@ pub const OGD = packed struct {
 /// Determines control type, paint type, and positioning
 pub fn createCube(ogd: OGD, cube_index: u8) !Cube {
     var cube: Cube = .{
-        .cube_data = ogd.data,
+        .cube_type = @as(CubeType, @enumFromInt(ogd.cube_type)),
+        .cube_paint = @as(CubePaint, @enumFromInt(ogd.cube_paint)),
+        .cube_state = ogd.cube_state,
         .euclid = .{ .position = pos.Position.init(.{}, .{
             .x = (@as(f32, @floatFromInt(ogd.pos_x)) - 128.0) * 0.5,
             .y = (@as(f32, @floatFromInt(ogd.pos_y)) - 128.0) * 0.5,
@@ -84,6 +91,7 @@ pub fn createCube(ogd: OGD, cube_index: u8) !Cube {
             (std.math.pi / 8.0) * @as(f32, @floatFromInt(ogd.rot_z)),
         }) },
         .mesh_index = try msh.meshes.fetch(0),
+        .self_index = cube_index,
     };
 
     cube.phys_body = phy.addPhysCube(&cube, cube_index);
@@ -103,7 +111,7 @@ pub const aColors = [_]csm.Vec4{
     csm.Vec4{ 0.2, 0.1, 0.3, 1.0 }, //obelisk
     csm.Vec4{ 0.6, 0.6, 0.8, 0.4 }, //glass
     csm.Vec4{ 0.1, 0.3, 0.7, 1.0 }, //player
-    csm.Vec4{ 0.8, 0.2, 0.1, 1.0 }, //enemy
+    csm.Vec4{ 0.7, 0.0, 0.0, 1.0 }, //enemy
     csm.Vec4{ 1.0, 1.0, 0.3, 1.0 }, //coin
     csm.Vec4{ 0.8, 0.6, 0.2, 0.3 }, //invisible with editor
 };
@@ -115,7 +123,7 @@ pub const bColors = [_]csm.Vec4{
     csm.Vec4{ 0.2, 0.1, 0.3, 1.0 }, //obelisk
     csm.Vec4{ 0.3, 0.3, 0.4, 0.7 }, //glass
     csm.Vec4{ 0.05, 0.15, 0.35, 1.0 }, //player
-    csm.Vec4{ 0.5, 0.1, 0.1, 1.0 }, //enemy
+    csm.Vec4{ 0.4, 0.1, 0.1, 1.0 }, //enemy
     csm.Vec4{ 0.7, 0.7, 0.1, 1.0 }, //coin
     csm.Vec4{ 0.6, 0.3, 0.1, 0.4 }, //invisible with editor
 };

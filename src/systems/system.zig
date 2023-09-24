@@ -73,8 +73,8 @@ pub fn init() !void {
     //TODO move window count/name/configuration over to configurable options
     try wnd.createNewWindow(
         "cubedquest",
-        .{ 300, 300 },
-        .{ 800, 600 },
+        .{ .x = 300, .y = 300 },
+        .{ .x = 800, .y = 600 },
     );
 
     //init sky
@@ -120,12 +120,14 @@ pub fn proc() !bool {
     if (getState(EngineState.playing)) {
         const cubes = lvl.active_level.cubes;
         for (cubes.items) |*c| {
-            switch (@as(cbe.CubeType, @enumFromInt((c.cube_data) & 7))) {
+            switch (c.cube_type) {
                 cbe.CubeType.ground => {},
                 cbe.CubeType.player => {
                     cnt.procPlayer(c);
                 },
-                cbe.CubeType.enemy => {},
+                cbe.CubeType.enemy => {
+                    cnt.procEnemy(c);
+                },
                 cbe.CubeType.coin => {},
                 cbe.CubeType.endgate => {},
                 cbe.CubeType.spotlight => {},
