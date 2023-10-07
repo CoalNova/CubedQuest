@@ -4,7 +4,8 @@
 
 const std = @import("std");
 const zmt = @import("zmath");
-const zph = @import("zbullet");
+const zph = @import("zphysics");
+const cbe = @import("../objects/cube.zig");
 
 pub const Mat4 = [4]@Vector(4, f32);
 pub const Quat = @Vector(4, f32); // x,y,z,w
@@ -27,7 +28,7 @@ pub fn convQuatToEul(q: @Vector(4, f32)) @Vector(3, f32) {
 
     // pitch (y-axis rotation)
     var sinp: f32 = 2 * (w * y - z * x);
-    if (@fabs(sinp) >= 1) {
+    if (@abs(sinp) >= 1) {
         angles[1] = std.math.copysign(@as(f32, std.math.pi / 2.0), sinp); // use 90 degrees if out of range
     } else angles[1] = std.math.asin(sinp);
 
@@ -55,16 +56,6 @@ pub fn convEulToQuat(vec: Vec3) Quat {
         cr * cp * sy - sr * sp * cy,
         cr * cp * cy + sr * sp * sy,
     };
-}
-
-/// TODO this
-pub fn decomposeTransform(body: zph.Body, rotation: *zmt.Quat, position: *Vec3) void {
-    var temp: [12]f32 = undefined;
-    // Get the transform from Bullet and into 't'
-    body.getGraphicsWorldTransform(&temp);
-
-    rotation.* = zmt.util.getRotationQuat(zmt.loadMat43(&temp));
-    position.* = Vec3{ temp[9], temp[10], temp[11] };
 }
 
 /// Oblivion Dialogue, but with more math
@@ -153,7 +144,7 @@ pub inline fn rayPlane(
 }
 
 pub inline fn normalizeVec3(vec3: Vec3) Vec3 {
-    const sum = @fabs(vec3[0]) + @fabs(vec3[1]) + @fabs(vec3[2]);
+    const sum = @abs(vec3[0]) + @abs(vec3[1]) + @abs(vec3[2]);
     return Vec3{ vec3[0] / sum, vec3[1] / sum, vec3[2] / sum };
 }
 

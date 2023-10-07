@@ -84,8 +84,6 @@ fn addShader(shader_id: u32) Shader {
     const g_shader: [:0]const u8 = if (shader_id == 0) cube_g_shader else sky_g_shader;
     const f_shader: [:0]const u8 = if (shader_id == 0) cube_f_shader else sky_f_shader;
 
-    std.debug.print("{s}\n", .{v_shader});
-
     // Load and compile shader modules from a provided source. Sources will need to be generally retrieved.
     const vert_module = loadShaderModule(v_shader, program, zgl.VERTEX_SHADER);
     defer zgl.deleteShader(vert_module);
@@ -112,37 +110,38 @@ fn addShader(shader_id: u32) Shader {
     _ = rnd.checkGLErrorState("Use Shader");
 
     shader.mtx_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("matrix\x00")));
-    if (shader.mtx_name > -1) std.debug.print("shader.mtx_name: {}\n", .{shader.mtx_name});
     shader.mdl_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("model\x00")));
-    if (shader.mdl_name > -1) std.debug.print("shader.mdl_name: {}\n", .{shader.mdl_name});
     shader.vpm_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("viewproj\x00")));
-    if (shader.vpm_name > -1) std.debug.print("shader.vpm_name: {}\n", .{shader.vpm_name});
     shader.cam_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("camera\x00")));
-    if (shader.cam_name > -1) std.debug.print("shader.cam_name: {}\n", .{shader.cam_name});
     shader.rot_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("rotation\x00")));
-    if (shader.rot_name > -1) std.debug.print("shader.rot_name: {}\n", .{shader.rot_name});
     shader.pst_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("position\x00")));
-    if (shader.pst_name > -1) std.debug.print("shader.pst_name: {}\n", .{shader.pst_name});
     shader.bnd_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("bounds\x00")));
-    if (shader.bnd_name > -1) std.debug.print("shader.bnd_name: {}\n", .{shader.bnd_name});
     shader.ind_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("index\x00")));
-    if (shader.ind_name > -1) std.debug.print("shader.ind_name: {}\n", .{shader.ind_name});
     shader.str_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("stride\x00")));
-    if (shader.str_name > -1) std.debug.print("shader.str_name: {}\n", .{shader.str_name});
     shader.bse_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("base\x00")));
-    if (shader.bse_name > -1) std.debug.print("shader.bse_name: {}\n", .{shader.bse_name});
     shader.ran_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("range\x00")));
-    if (shader.ran_name > -1) std.debug.print("shader.ran_name: {}\n", .{shader.ran_name});
     shader.sun_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("sun\x00")));
-    if (shader.sun_name > -1) std.debug.print("shader.sun_name: {}\n", .{shader.sun_name});
     shader.aml_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("ambientLuminance\x00")));
-    if (shader.aml_name > -1) std.debug.print("shader.aml_name: {}\n", .{shader.aml_name});
     shader.amc_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("ambientChroma\x00")));
-    if (shader.amc_name > -1) std.debug.print("shader.amc_name: {}\n", .{shader.amc_name});
     shader.cra_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("colorA\x00")));
-    if (shader.cra_name > -1) std.debug.print("shader.cra_name: {}\n", .{shader.cra_name});
     shader.crb_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("colorB\x00")));
-    if (shader.crb_name > -1) std.debug.print("shader.crb_name: {}\n", .{shader.crb_name});
+
+    //if (shader.mtx_name > -1) std.debug.print("shader.mtx_name: {}\n", .{shader.mtx_name});
+    //if (shader.mdl_name > -1) std.debug.print("shader.mdl_name: {}\n", .{shader.mdl_name});
+    //if (shader.vpm_name > -1) std.debug.print("shader.vpm_name: {}\n", .{shader.vpm_name});
+    //if (shader.cam_name > -1) std.debug.print("shader.cam_name: {}\n", .{shader.cam_name});
+    //if (shader.rot_name > -1) std.debug.print("shader.rot_name: {}\n", .{shader.rot_name});
+    //if (shader.pst_name > -1) std.debug.print("shader.pst_name: {}\n", .{shader.pst_name});
+    //if (shader.bnd_name > -1) std.debug.print("shader.bnd_name: {}\n", .{shader.bnd_name});
+    //if (shader.ind_name > -1) std.debug.print("shader.ind_name: {}\n", .{shader.ind_name});
+    //if (shader.str_name > -1) std.debug.print("shader.str_name: {}\n", .{shader.str_name});
+    //if (shader.bse_name > -1) std.debug.print("shader.bse_name: {}\n", .{shader.bse_name});
+    //if (shader.ran_name > -1) std.debug.print("shader.ran_name: {}\n", .{shader.ran_name});
+    //if (shader.sun_name > -1) std.debug.print("shader.sun_name: {}\n", .{shader.sun_name});
+    //if (shader.aml_name > -1) std.debug.print("shader.aml_name: {}\n", .{shader.aml_name});
+    //if (shader.amc_name > -1) std.debug.print("shader.amc_name: {}\n", .{shader.amc_name});
+    //if (shader.cra_name > -1) std.debug.print("shader.cra_name: {}\n", .{shader.cra_name});
+    //if (shader.crb_name > -1) std.debug.print("shader.crb_name: {}\n", .{shader.crb_name});
 
     shader.subscribers = 1;
     return shader;

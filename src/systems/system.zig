@@ -2,7 +2,6 @@
 const std = @import("std");
 const zdl = @import("zsdl");
 const zgl = @import("zopengl");
-const zpy = @import("zbullet");
 const zmt = @import("zmath");
 const csm = @import("../systems/csmath.zig");
 const phy = @import("../systems/physics.zig");
@@ -66,9 +65,10 @@ pub fn init() !void {
     try zdl.init(zdl.InitFlags.everything);
     std.log.info("SDL initialized succesfully.", .{});
     try wnd.init();
+    std.log.info("Window initialized succesfully.", .{});
 
     // initialize physics
-    phy.init();
+    try phy.init();
 
     //TODO move window count/name/configuration over to configurable options
     try wnd.createNewWindow(
@@ -77,7 +77,7 @@ pub fn init() !void {
         .{ .x = 800, .y = 600 },
     );
 
-    //init sky
+    // init sky
     try rnd.initSky();
 
     // set engine flags to everything we need
@@ -98,7 +98,8 @@ pub fn deinit() void {
     mat.materials.deinit();
     shd.shaders.deinit();
 
-    phy.deinit();
+    if (getState(EngineState.physics))
+        phy.deinit();
 
     wnd.deinit();
     zdl.quit();

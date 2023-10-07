@@ -147,7 +147,7 @@ pub fn loadDebugLevel() !RunningLevel {
     var ogd = cbe.OGD{
         .cube_type = @intFromEnum(cbe.CubeType.player),
         .cube_paint = @intFromEnum(cbe.CubePaint.player),
-        .pos_z = 130,
+        .pos_z = 128,
         .pos_x = 118,
     };
     try level.cubes.append(try cbe.createCube(ogd, 0));
@@ -191,6 +191,14 @@ pub fn loadDebugLevel() !RunningLevel {
     try level.cubes.append(try cbe.createCube(ogd, 5));
 
     ogd = cbe.OGD{
+        .cube_type = @intFromEnum(cbe.CubeType.enemy),
+        .cube_paint = @intFromEnum(cbe.CubePaint.enemy),
+        .pos_z = 130,
+        .pos_x = 138,
+    };
+    try level.cubes.append(try cbe.createCube(ogd, 7));
+
+    ogd = cbe.OGD{
         .cube_paint = @intFromEnum(cbe.CubePaint.glass),
         .pos_z = 129,
         .sca_y = 1,
@@ -199,14 +207,6 @@ pub fn loadDebugLevel() !RunningLevel {
         .rot_z = 6,
     };
     try level.cubes.append(try cbe.createCube(ogd, 6));
-
-    ogd = cbe.OGD{
-        .cube_type = @intFromEnum(cbe.CubeType.enemy),
-        .cube_paint = @intFromEnum(cbe.CubePaint.enemy),
-        .pos_z = 130,
-        .pos_x = 138,
-    };
-    try level.cubes.append(try cbe.createCube(ogd, 7));
 
     const camera = &wnd.windows.items[0].camera;
     camera.euclid.position.addAxial(.{ .x = 0.0, .y = -8.0, .z = 522.0 });

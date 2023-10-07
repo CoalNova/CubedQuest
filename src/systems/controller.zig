@@ -39,6 +39,7 @@ pub fn noFun(self: *cbe.Cube, mag: f32) void {
 /// Everything here is wrong
 /// just thought you should know
 pub fn procPlayer(cube: *cbe.Cube) void {
+    _ = cube;
     // a rotational magnitude for testing inputs
     const rot_mag = 7.0; //1.0 / (std.math.pi * 10.0);
     var euler = csm.Vec3{ 0, 0, 0 };
@@ -54,22 +55,22 @@ pub fn procPlayer(cube: *cbe.Cube) void {
 
     euler *= csm.Vec3{ rot_mag, rot_mag, rot_mag };
 
-    cube.phys_body.applyBodyTorque(&[_]f32{
-        euler[1],
-        euler[0],
-        euler[2],
-    });
+    // cube.phys_body.applyBodyTorque(&[_]f32{
+    //     euler[1],
+    //     euler[0],
+    //     euler[2],
+    // });
 
-    var rotation: zmt.Quat = undefined;
-    var position: csm.Vec3 = undefined;
-    csm.decomposeTransform(cube.phys_body, &rotation, &position);
-    cube.euclid.rotation = rotation;
-    cube.euclid.position.setAxial(tpe.Float3.init(position[0], position[1], position[2]));
+    // var rotation: zmt.Quat = undefined;
+    // var position: csm.Vec3 = undefined;
+    // cube.euclid.rotation = rotation;
+    // cube.euclid.position.setAxial(tpe.Float3.init(position[0], position[1], position[2]));
 }
 
 pub fn procEnemy(cube: *cbe.Cube) void {
     // a rotational magnitude
     const rot_mag = 7.0;
+    _ = rot_mag;
     var euler = csm.Vec3{ 0, 0, 0 };
     const self = cube.euclid.position.getAxial();
     target_block: {
@@ -91,15 +92,15 @@ pub fn procEnemy(cube: *cbe.Cube) void {
         }
     }
 
-    cube.phys_body.applyBodyTorque(&[_]f32{
-        euler[1] * rot_mag * 1.3,
-        -euler[0] * rot_mag * 1.3,
-        euler[2] * rot_mag * 1.3,
-    });
+    // cube.phys_body.applyBodyTorque(&[_]f32{
+    //     euler[1] * rot_mag * 1.3,
+    //     -euler[0] * rot_mag * 1.3,
+    //     euler[2] * rot_mag * 1.3,
+    // });
 
-    var rotation: zmt.Quat = undefined;
-    var position: csm.Vec3 = undefined;
-    csm.decomposeTransform(cube.phys_body, &rotation, &position);
-    cube.euclid.rotation = rotation;
-    cube.euclid.position.setAxial(tpe.Float3.init(position[0], position[1], position[2]));
+    // var rotation: zmt.Quat = undefined;
+    // var position: csm.Vec3 = undefined;
+
+    // cube.euclid.rotation = rotation;
+    // cube.euclid.position.setAxial(tpe.Float3.init(position[0], position[1], position[2]));
 }

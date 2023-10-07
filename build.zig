@@ -1,8 +1,8 @@
 const std = @import("std");
 const zmath = @import("libs/zmath/build.zig");
-const zbullet = @import("libs/zbullet/build.zig");
 const zopengl = @import("libs/zopengl/build.zig");
 const zsdl = @import("libs/zsdl/build.zig");
+const zphysics = @import("libs/zphysics/build.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
@@ -17,15 +17,20 @@ pub fn build(b: *std.Build) void {
 
     const zsdl_pkg = zsdl.package(b, target, optimize, .{});
     const zopengl_pkg = zopengl.package(b, target, optimize, .{});
-    const zbullet_pkg = zbullet.package(b, target, optimize, .{});
     const zmath_pkg = zmath.package(b, target, optimize, .{
         .options = .{ .enable_cross_platform_determinism = true },
     });
+    const zphysics_pkg = zphysics.package(b, target, optimize, .{
+        .options = .{
+            .use_double_precision = false,
+            .enable_cross_platform_determinism = true,
+        },
+    });
 
+    zphysics_pkg.link(exe);
     zsdl_pkg.link(exe);
     zmath_pkg.link(exe);
     zopengl_pkg.link(exe);
-    zbullet_pkg.link(exe);
 
     b.installArtifact(exe);
 

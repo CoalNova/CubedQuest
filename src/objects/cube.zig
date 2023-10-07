@@ -1,7 +1,7 @@
 const std = @import("std");
 const zmt = @import("zmath");
 const zdl = @import("zsdl");
-const zph = @import("zbullet");
+const zph = @import("zphysics");
 const phy = @import("../systems/physics.zig");
 const csm = @import("../systems/csmath.zig");
 const sys = @import("../systems/system.zig");
@@ -20,7 +20,7 @@ pub const Cube = struct {
     euclid: euc.Euclid = .{},
     self_index: u8 = 0,
     mesh_index: usize = 0,
-    phys_body: zph.Body = undefined,
+    phys_body: ?*zph.Body = null,
 };
 
 /// The Cube Type
@@ -94,7 +94,8 @@ pub fn createCube(ogd: OGD, cube_index: u8) !Cube {
         .self_index = cube_index,
     };
 
-    cube.phys_body = phy.addPhysCube(&cube, cube_index);
+    if (sys.getState(sys.EngineState.physics))
+        try phy.addPhysCube(&cube, cube_index);
     return cube;
 }
 
