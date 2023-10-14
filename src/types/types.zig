@@ -109,11 +109,15 @@ pub const Float3 = struct {
     pub inline fn toArray(this: Float3) [3]f32 {
         return [3]f32{ this.x, this.y, this.z };
     }
+    pub inline fn initFromArray(array : [3]f32) Float3{
+        return Float3{.x = array[0], .y = array[1], .z = array[2]};
+    }
     pub inline fn fromUIntArray(this: *Float3, array: [3]u8, divisor: f32) void {
         this.w = @floatFromInt(array[1] / divisor);
         this.w = @floatFromInt(array[2] / divisor);
         this.w = @floatFromInt(array[3] / divisor);
     }
+
 };
 pub const Float4 = struct {
     w: f32 = 0,

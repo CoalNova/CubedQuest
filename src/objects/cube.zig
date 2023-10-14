@@ -20,7 +20,7 @@ pub const Cube = struct {
     euclid: euc.Euclid = .{},
     self_index: u8 = 0,
     mesh_index: usize = 0,
-    phys_body: ?*zph.Body = null,
+    phys_body: u32 = 0,
 };
 
 /// The Cube Type
@@ -32,7 +32,7 @@ pub const CubeType = enum(u3) {
     endgate = 3,
     coin = 4,
     trigger = 5,
-    force = 6,
+    empty = 6,
     spotlight = 7,
 };
 
@@ -128,3 +128,16 @@ pub const bColors = [_]csm.Vec4{
     csm.Vec4{ 0.7, 0.7, 0.1, 1.0 }, //coin
     csm.Vec4{ 0.6, 0.3, 0.1, 0.4 }, //invisible with editor
 };
+
+pub fn getCubeTitle(cube_type: CubeType) []const u8{
+    return switch (cube_type) {
+        CubeType.player => "Player", 
+        CubeType.endgate=> "EndGate", 
+        CubeType.ground => "Ground", 
+        CubeType.enemy => "Enemy", 
+        CubeType.empty => "Empty", 
+        CubeType.spotlight => "Spotlight", 
+        CubeType.trigger => "Trigger", 
+        CubeType.coin => "Coin",
+    };
+}

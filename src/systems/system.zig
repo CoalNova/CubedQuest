@@ -133,7 +133,7 @@ pub fn proc() !bool {
                 cbe.CubeType.endgate => {},
                 cbe.CubeType.spotlight => {},
                 cbe.CubeType.trigger => {},
-                cbe.CubeType.force => {},
+                cbe.CubeType.empty => {},
             }
         }
     }

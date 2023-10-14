@@ -1,6 +1,8 @@
 const std = @import("std");
 const zdl = @import("zsdl");
 const zmt = @import("zmath");
+const zph = @import("zphysics");
+const phy = @import("../systems/physics.zig");
 const csm = @import("../systems/csmath.zig");
 const evt = @import("../systems/event.zig");
 const cbe = @import("../objects/cube.zig");
@@ -39,7 +41,6 @@ pub fn noFun(self: *cbe.Cube, mag: f32) void {
 /// Everything here is wrong
 /// just thought you should know
 pub fn procPlayer(cube: *cbe.Cube) void {
-    _ = cube;
     // a rotational magnitude for testing inputs
     const rot_mag = 7.0; //1.0 / (std.math.pi * 10.0);
     var euler = csm.Vec3{ 0, 0, 0 };
@@ -55,6 +56,7 @@ pub fn procPlayer(cube: *cbe.Cube) void {
 
     euler *= csm.Vec3{ rot_mag, rot_mag, rot_mag };
 
+    phy.procCube(cube, euler);
     // cube.phys_body.applyBodyTorque(&[_]f32{
     //     euler[1],
     //     euler[0],

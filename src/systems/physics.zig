@@ -11,12 +11,67 @@ var a_a = std.heap.ArenaAllocator.init(sys.allocator);
 const arena_allocator = a_a.allocator();
 
 // physics containers?
-var physics_system: *zph.PhysicsSystem = undefined;
-var broad_phase_layer_interface: *BroadPhaseLayerInterface = undefined;
-var object_vs_broad_phase_layer_filter: *ObjectVsBroadPhaseLayerFilter = undefined;
-var object_layer_pair_filter: *ObjectLayerPairFilter = undefined;
-var contact_listener: *ContactListener = undefined;
-var body_interface: *zph.BodyInterface = undefined;
+const Phystainer = struct{
+    physics_system: *zph.PhysicsSystem = undefined,
+    broad_phase_layer_interface: *BroadPhaseLayerInterface = undefined,
+    object_vs_broad_phase_layer_filter: *ObjectVsBroadPhaseLayerFilter = undefined,
+    object_layer_pair_filter: *ObjectLayerPairFilter = undefined,
+    contact_listener: *ContactListener = undefined,
+    body_interface: *zph.BodyInterface = undefined,
+    lock_interface: *const zph.BodyLockInterface = undefined,
+    collision_group: zph.CollisionGroup = .{},
+ };
+
+var phys = Phystainer{};
+
+
+
+/// Initialize Physics World and Cube Physics Template?
+pub fn init() !void {
+    phys.broad_phase_layer_interface = try sys.allocator.create(BroadPhaseLayerInterface);
+    phys.object_vs_broad_phase_layer_filter = try sys.allocator.create(ObjectVsBroadPhaseLayerFilter);
+    phys.object_layer_pair_filter = try sys.allocator.create(ObjectLayerPairFilter);
+    phys.contact_listener = try sys.allocator.create(ContactListener);
+
+    phys.broad_phase_layer_interface.* = BroadPhaseLayerInterface.init();
+    phys.object_vs_broad_phase_layer_filter.* = .{};
+    phys.object_layer_pair_filter.* = .{};
+    phys.contact_listener.* = .{};
+
+    try zph.init(sys.allocator, .{});
+    phys.physics_system = try zph.PhysicsSystem.create(
+        @as(*const zph.BroadPhaseLayerInterface, @ptrCast(phys.broad_phase_layer_interface)),
+        @as(*const zph.ObjectVsBroadPhaseLayerFilter, @ptrCast(phys.object_vs_broad_phase_layer_filter)),
+        @as(*const zph.ObjectLayerPairFilter, @ptrCast(phys.object_layer_pair_filter)),
+        .{
+            .max_bodies = 1024,
+            .num_body_mutexes = 0,
+            .max_body_pairs = 1024,
+            .max_contact_constraints = 1024,
+        },
+    );
+
+    phys.physics_system.setGravity(.{ 0, 0, -9.88 });
+
+    phys.body_interface = phys.physics_system.getBodyInterfaceMut();
+    phys.lock_interface = phys.physics_system.getBodyLockInterface();
+    std.log.info("ZPhysics (Jolt) initialized successfully", .{});
+    sys.setStateOn(sys.EngineState.physics);
+}
+
+/// Deinitilaize Physics World
+pub fn deinit() void {
+    sys.setStateOff(sys.EngineState.physics);
+    phys.physics_system.destroy();
+    zph.deinit();
+}
+
+/// Process Physworld
+/// TODO proper timing on physics steps
+pub fn proc() void {
+    phys.physics_system.update(1.0 / 60.0, .{}) catch unreachable;
+}
+
 
 /// Generate a phys cube and add new cube to the physics blob
 /// TODO figure out why no collision
@@ -34,98 +89,55 @@ pub fn addPhysCube(cube: *cbe.Cube, index: u8) !void {
     const box_shape = try box_shape_settings.createShape();
     defer box_shape.release();
 
-    //pub const BodyCreationSettings = extern struct {
-    //position: [4]Real align(rvec_align) = .{ 0, 0, 0, 0 }, // 4th element is ignored
-    //rotation: [4]f32 align(16) = .{ 0, 0, 0, 1 },
-    //linear_velocity: [4]f32 align(16) = .{ 0, 0, 0, 0 }, // 4th element is ignored
-    //angular_velocity: [4]f32 align(16) = .{ 0, 0, 0, 0 }, // 4th element is ignored
-    //user_data: u64 = 0,
-    //object_layer: ObjectLayer = 0,
-    //collision_group: CollisionGroup = .{},
-    //motion_type: MotionType = .dynamic,
-    //allow_dynamic_or_kinematic: bool = false,
-    //is_sensor: bool = false,
-    //use_manifold_reduction: bool = true,
-    //motion_quality: MotionQuality = .discrete,
-    //allow_sleeping: bool = true,
-    //friction: f32 = 0.2,
-    //restitution: f32 = 0.0,
-    //linear_damping: f32 = 0.05,
-    //angular_damping: f32 = 0.05,
-    //max_linear_velocity: f32 = 500.0,
-    //max_angular_velocity: f32 = 0.25 * c.JPC_PI * 60.0,
-    //gravity_factor: f32 = 1.0,
-    //override_mass_properties: OverrideMassProperties = .calc_mass_inertia,
-    //inertia_multiplier: f32 = 1.0,
-    //mass_properties_override: MassProperties = .{},
-    //reserved: ?*const anyopaque = null,
-    //shape: ?*const Shape = null,
-
-    cube.phys_body = try body_interface.createBody(.{
+    cube.phys_body = try phys.body_interface.createAndAddBody( .{
         .motion_type = if (cube.cube_type == cbe.CubeType.player or cube.cube_type == cbe.CubeType.enemy) .dynamic else .static,
         .position = .{ axial.x, axial.y, axial.z, 1.0 }, // 4th element is ignored
         .rotation = .{ quat[0], quat[1], quat[2], quat[3] },
         .shape = box_shape,
         .mass_properties_override = .{ .mass = 1.0 },
         .allow_sleeping = false,
-        .motion_type = .static,
-    });
+        .collision_group = phys.collision_group,
+        .object_layer = 1,
+    }, .activate);
 
-    physics_system.optimizeBroadPhase();
+    phys.physics_system.optimizeBroadPhase();
+
+    std.debug.print("Made Cube: {s}\n", .{cbe.getCubeTitle(cube.cube_type)});
 }
 
 /// Remove Physics Cube
 pub fn remPhysCube(cube: *cbe.Cube) void {
-    if (cube.phys_body) |body|
-        body_interface.removeAndDestroyBody(body.id);
+    phys.body_interface.removeAndDestroyBody(cube.phys_body);
+    phys.physics_system.optimizeBroadPhase();
+
 }
 
-/// Initialize Physics World and Cube Physics Template?
-pub fn init() !void {
-    broad_phase_layer_interface = try sys.allocator.create(BroadPhaseLayerInterface);
-    object_vs_broad_phase_layer_filter = try sys.allocator.create(ObjectVsBroadPhaseLayerFilter);
-    object_layer_pair_filter = try sys.allocator.create(ObjectLayerPairFilter);
-    contact_listener = try sys.allocator.create(ContactListener);
+/// Process 
+pub fn procCube(cube : *cbe.Cube, torque : @Vector(3, f32)) void {
+    _ = torque;
+    
+    var write_lock: zph.BodyLockWrite = .{};
+    write_lock.lock(phys.lock_interface, cube.phys_body);
+    defer write_lock.unlock();
+    const body = write_lock.body.?;
+    //phys.body_interface.addTorque(cube.phys_body, torque);
+    
 
-    broad_phase_layer_interface.* = BroadPhaseLayerInterface.init();
-    object_vs_broad_phase_layer_filter.* = .{};
-    object_layer_pair_filter.* = .{};
-    contact_listener.* = .{};
-
-    try zph.init(sys.allocator, .{});
-    physics_system = try zph.PhysicsSystem.create(
-        @as(*const zph.BroadPhaseLayerInterface, @ptrCast(broad_phase_layer_interface)),
-        @as(*const zph.ObjectVsBroadPhaseLayerFilter, @ptrCast(object_vs_broad_phase_layer_filter)),
-        @as(*const zph.ObjectLayerPairFilter, @ptrCast(object_layer_pair_filter)),
-        .{
-            .max_bodies = 1024,
-            .num_body_mutexes = 0,
-            .max_body_pairs = 1024,
-            .max_contact_constraints = 1024,
-        },
-    );
-
-    physics_system.setGravity(.{ 0, 0, -9.88 });
-
-    body_interface = physics_system.getBodyInterfaceMut();
-    std.log.info("ZPhysics (Jolt) initialized successfully", .{});
-    sys.setStateOn(sys.EngineState.physics);
+    cube.euclid.position.setAxial(tpe.Float3{
+        .x = body.position[0], 
+        .y = body.position[1], 
+        .z = body.position[2],
+        });
+    cube.euclid.rotation = zmt.Quat{
+        body.rotation[0],
+        body.rotation[1],
+        body.rotation[2],
+        body.rotation[3],
+        };
 }
 
-/// Deinitilaize Physics World
-pub fn deinit() void {
-    sys.setStateOff(sys.EngineState.physics);
-    physics_system.destroy();
-    zph.deinit();
-}
 
-/// Process Physworld
-/// TODO proper timing on physics steps
-pub fn proc() void {
-    physics_system.update(1.0 / 60.0, .{}) catch unreachable;
-}
-
-///
+/// Necessary for ZPhysics/Jolt
 const BroadPhaseLayerInterface = extern struct {
     usingnamespace zph.BroadPhaseLayerInterface.Methods(@This());
     __v: *const zph.BroadPhaseLayerInterface.VTable = &vtable,
@@ -157,6 +169,7 @@ const BroadPhaseLayerInterface = extern struct {
     }
 };
 
+/// Necessary for ZPhysics/Jolt
 const ObjectVsBroadPhaseLayerFilter = extern struct {
     usingnamespace zph.ObjectVsBroadPhaseLayerFilter.Methods(@This());
     __v: *const zph.ObjectVsBroadPhaseLayerFilter.VTable = &vtable,
@@ -176,6 +189,7 @@ const ObjectVsBroadPhaseLayerFilter = extern struct {
     }
 };
 
+/// Necessary for ZPhysics/Jolt
 const ObjectLayerPairFilter = extern struct {
     usingnamespace zph.ObjectLayerPairFilter.Methods(@This());
     __v: *const zph.ObjectLayerPairFilter.VTable = &vtable,
@@ -195,6 +209,7 @@ const ObjectLayerPairFilter = extern struct {
     }
 };
 
+/// Necessary for ZPhysics/Jolt
 const ContactListener = extern struct {
     usingnamespace zph.ContactListener.Methods(@This());
     __v: *const zph.ContactListener.VTable = &vtable,
