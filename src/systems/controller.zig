@@ -42,17 +42,17 @@ pub fn noFun(self: *cbe.Cube, mag: f32) void {
 /// just thought you should know
 pub fn procPlayer(cube: *cbe.Cube) void {
     // a rotational magnitude for testing inputs
-    const rot_mag = 7.0; //1.0 / (std.math.pi * 10.0);
+    const rot_mag = 10000.0; //1.0 / (std.math.pi * 10.0);
     var euler = csm.Vec3{ 0, 0, 0 };
 
     if (evt.getInputStay(inputmaps[0].input_forward))
-        euler += csm.Vec3{ 0.0, -1.0, 0.0 };
-    if (evt.getInputStay(inputmaps[0].input_backward))
-        euler += csm.Vec3{ 0.0, 1.0, 0.0 };
-    if (evt.getInputStay(inputmaps[0].input_leftward))
         euler += csm.Vec3{ -1.0, 0.0, 0.0 };
-    if (evt.getInputStay(inputmaps[0].input_rightward))
+    if (evt.getInputStay(inputmaps[0].input_backward))
         euler += csm.Vec3{ 1.0, 0.0, 0.0 };
+    if (evt.getInputStay(inputmaps[0].input_leftward))
+        euler += csm.Vec3{ 0.0, -1.0, 0.0 };
+    if (evt.getInputStay(inputmaps[0].input_rightward))
+        euler += csm.Vec3{ 0.0, 1.0, 0.0 };
 
     euler *= csm.Vec3{ rot_mag, rot_mag, rot_mag };
 
@@ -71,8 +71,7 @@ pub fn procPlayer(cube: *cbe.Cube) void {
 
 pub fn procEnemy(cube: *cbe.Cube) void {
     // a rotational magnitude
-    const rot_mag = 7.0;
-    _ = rot_mag;
+    const rot_mag = 10000.0;
     var euler = csm.Vec3{ 0, 0, 0 };
     const self = cube.euclid.position.getAxial();
     target_block: {
@@ -88,12 +87,14 @@ pub fn procEnemy(cube: *cbe.Cube) void {
         for (lvl.active_level.cubes.items) |c| {
             if (c.cube_type == cbe.CubeType.player) {
                 const target = c.euclid.position.getAxial();
-                euler = csm.normalizeVec3(csm.Vec3{ self.x - target.x, self.y - target.y, 0 });
+                euler = csm.normalizeVec3(csm.Vec3{ self.y - target.y, -(self.x - target.x), 0 });
                 break :target_block;
             }
         }
     }
 
+    euler *= csm.Vec3{ rot_mag, rot_mag, rot_mag };
+    phy.procCube(cube, euler);
     // cube.phys_body.applyBodyTorque(&[_]f32{
     //     euler[1] * rot_mag * 1.3,
     //     -euler[0] * rot_mag * 1.3,

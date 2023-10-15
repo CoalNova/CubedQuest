@@ -148,7 +148,7 @@ pub fn loadDebugLevel() !RunningLevel {
         .cube_type = @intFromEnum(cbe.CubeType.player),
         .cube_paint = @intFromEnum(cbe.CubePaint.player),
         .pos_z = 134,
-        .pos_x = 118,
+        .pos_x = 125,
     };
     try level.cubes.append(try cbe.createCube(ogd, 0));
     ogd = cbe.OGD{
