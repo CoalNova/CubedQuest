@@ -52,8 +52,8 @@ pub const CubePaint = enum(u3) {
 /// Cube state,
 /// if active, inactive, enabled, or disabled
 pub const CubeState = enum(u2) {
-    enabled = 0x01,
-    active = 0x10,
+    enabled = 0b01,
+    active = 0b10,
 };
 
 pub const OGD = packed struct {
@@ -94,6 +94,16 @@ pub fn createCube(ogd: OGD, cube_index: u8) !Cube {
         .self_index = cube_index,
     };
 
+    if (cube.cube_type == CubeType.coin) {
+        cube.euclid.scale.x *= 0.5;
+        cube.euclid.scale.y *= 0.25;
+        cube.euclid.scale.z *= 0.5;
+    }
+
+    if (cube.cube_type == CubeType.endgate) {
+        cube.euclid.scale.z *= 0.2;
+    }
+
     if (sys.getState(sys.EngineState.physics))
         try phy.addPhysCube(&cube, cube_index);
     return cube;
@@ -107,7 +117,7 @@ pub fn destroyCube(cube: *Cube) void {
 
 /// Cube Center Color
 pub const aColors = [_]csm.Vec4{
-    csm.Vec4{ 0.2, 0.7, 0.2, 1.0 }, //ground
+    csm.Vec4{ 0.3, 0.6, 0.3, 1.0 }, //ground
     csm.Vec4{ 0.7, 0.6, 0.2, 1.0 }, //wall
     csm.Vec4{ 0.2, 0.1, 0.3, 1.0 }, //obelisk
     csm.Vec4{ 0.6, 0.6, 0.8, 0.4 }, //glass
@@ -129,15 +139,15 @@ pub const bColors = [_]csm.Vec4{
     csm.Vec4{ 0.6, 0.3, 0.1, 0.4 }, //invisible with editor
 };
 
-pub fn getCubeTitle(cube_type: CubeType) []const u8{
+pub fn getCubeTitle(cube_type: CubeType) []const u8 {
     return switch (cube_type) {
-        CubeType.player => "Player", 
-        CubeType.endgate=> "EndGate", 
-        CubeType.ground => "Ground", 
-        CubeType.enemy => "Enemy", 
-        CubeType.empty => "Empty", 
-        CubeType.spotlight => "Spotlight", 
-        CubeType.trigger => "Trigger", 
+        CubeType.player => "Player",
+        CubeType.endgate => "EndGate",
+        CubeType.ground => "Ground",
+        CubeType.enemy => "Enemy",
+        CubeType.empty => "Empty",
+        CubeType.spotlight => "Spotlight",
+        CubeType.trigger => "Trigger",
         CubeType.coin => "Coin",
     };
 }

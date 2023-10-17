@@ -19,7 +19,9 @@ pub fn main() !void {
     defer sys.deinit();
 
     //DEBUG set level
-    lvl.active_level = try lvl.loadDebugLevel();
+    try lvl.loadDebugLevel();
+
+    std.debug.print("Press enter to start level!\n", .{});
 
     // Process Engine Parts
     while (try sys.proc()) {
@@ -27,6 +29,15 @@ pub fn main() !void {
         //DEBUG quit
         if (evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.escape) }))
             sys.setStateOff(sys.EngineState.alive);
+
+        if (lvl.active_level.lvl_state == lvl.LevelState.generated) {
+            if (evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.@"return") }) or
+                evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.w) }) or
+                evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.s) }) or
+                evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.a) }) or
+                evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.a) }))
+                lvl.active_level.lvl_state = lvl.LevelState.playing;
+        }
 
         //DEBUG wireframe mode
         if (evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.space) }))

@@ -1,26 +1,30 @@
 const std = @import("std");
-const zphysics = @import("zphysics");
+const zph = @import("zphysics");
 const zmt = @import("zmath");
 const csm = @import("../systems/csmath.zig");
 const sys = @import("../systems/system.zig");
 const cbe = @import("../objects/cube.zig");
 const tpe = @import("../types/types.zig");
+const lvl = @import("../types/level.zig");
 
 // allocator appropriate for physics?
 var a_a = std.heap.ArenaAllocator.init(sys.allocator);
 const arena_allocator = a_a.allocator();
 
 // physics containers?
-const Phystainer = struct{
-    physics_system: *zphysics.PhysicsSystem = undefined,
+const Phystainer = struct {
+    physics_system: *zph.PhysicsSystem = undefined,
     broad_phase_layer_interface: *BroadPhaseLayerInterface = undefined,
     object_vs_broad_phase_layer_filter: *ObjectVsBroadPhaseLayerFilter = undefined,
     object_layer_pair_filter: *ObjectLayerPairFilter = undefined,
     contact_listener: *ContactListener = undefined,
-    body_interface: *zphysics.BodyInterface = undefined,
-    lock_interface: *const zphysics.BodyLockInterface = undefined,
-    collision_group: zphysics.CollisionGroup = .{.group_id = @as(c_uint, 1), .sub_group_id = @as(c_uint, 1), },
- };
+    body_interface: *zph.BodyInterface = undefined,
+    lock_interface: *const zph.BodyLockInterface = undefined,
+    collision_group: zph.CollisionGroup = .{
+        .group_id = @as(c_uint, 1),
+        .sub_group_id = @as(c_uint, 1),
+    },
+};
 
 var phys = Phystainer{};
 
@@ -36,11 +40,11 @@ pub fn init() !void {
     phys.object_layer_pair_filter.* = .{};
     phys.contact_listener.* = .{};
 
-    try zphysics.init(sys.allocator, .{});
-    phys.physics_system = try zphysics.PhysicsSystem.create(
-        @as(*const zphysics.BroadPhaseLayerInterface, @ptrCast(phys.broad_phase_layer_interface)),
-        @as(*const zphysics.ObjectVsBroadPhaseLayerFilter, @ptrCast(phys.object_vs_broad_phase_layer_filter)),
-        @as(*const zphysics.ObjectLayerPairFilter, @ptrCast(phys.object_layer_pair_filter)),
+    try zph.init(sys.allocator, .{});
+    phys.physics_system = try zph.PhysicsSystem.create(
+        @as(*const zph.BroadPhaseLayerInterface, @ptrCast(phys.broad_phase_layer_interface)),
+        @as(*const zph.ObjectVsBroadPhaseLayerFilter, @ptrCast(phys.object_vs_broad_phase_layer_filter)),
+        @as(*const zph.ObjectLayerPairFilter, @ptrCast(phys.object_layer_pair_filter)),
         .{
             .max_bodies = 1024,
             .num_body_mutexes = 0,
@@ -50,6 +54,8 @@ pub fn init() !void {
     );
 
     phys.physics_system.setGravity(.{ 0, 0, -9.88 });
+
+    phys.physics_system.setContactListener(phys.contact_listener);
 
     phys.body_interface = phys.physics_system.getBodyInterfaceMut();
     phys.lock_interface = phys.physics_system.getBodyLockInterface();
@@ -61,7 +67,7 @@ pub fn init() !void {
 pub fn deinit() void {
     sys.setStateOff(sys.EngineState.physics);
     phys.physics_system.destroy();
-    zphysics.deinit();
+    zph.deinit();
 }
 
 /// Process Physworld
@@ -71,7 +77,6 @@ pub fn proc() void {
     //phys.contact_listener.onContactAdded()
     //phys.body_interface.
 }
-
 
 /// Generate a phys cube and add new cube to the physics blob
 /// TODO figure out why no collision
@@ -83,13 +88,13 @@ pub fn addPhysCube(cube: *cbe.Cube, index: u8) !void {
     const scale = cube.euclid.scale;
 
     // half extents?
-    const box_shape_settings = try zphysics.BoxShapeSettings.create(.{ scale.x * 0.5, scale.y * 0.5, scale.z * 0.5 });
+    const box_shape_settings = try zph.BoxShapeSettings.create(.{ scale.x * 0.5, scale.y * 0.5, scale.z * 0.5 });
     defer box_shape_settings.release();
 
     const box_shape = try box_shape_settings.createShape();
     defer box_shape.release();
 
-    cube.phys_body = try phys.body_interface.createAndAddBody( .{
+    cube.phys_body = try phys.body_interface.createAndAddBody(.{
         .motion_type = if (cube.cube_type == cbe.CubeType.player or cube.cube_type == cbe.CubeType.enemy) .dynamic else .static,
         .position = .{ axial.x, axial.y, axial.z, 1.0 }, // 4th element is ignored
         .rotation = .{ quat[0], quat[1], quat[2], quat[3] },
@@ -98,7 +103,9 @@ pub fn addPhysCube(cube: *cbe.Cube, index: u8) !void {
         .allow_sleeping = false,
         .collision_group = phys.collision_group,
         .object_layer = if (cube.cube_type == cbe.CubeType.player or cube.cube_type == cbe.CubeType.enemy) object_layers.moving else object_layers.non_moving,
-        .friction = 1.0
+        .friction = 1.0,
+        .user_data = cube.self_index,
+        .is_sensor = (cube.cube_type == cbe.CubeType.coin or cube.cube_type == cbe.CubeType.trigger),
     }, .activate);
 
     phys.physics_system.optimizeBroadPhase();
@@ -108,12 +115,10 @@ pub fn addPhysCube(cube: *cbe.Cube, index: u8) !void {
 pub fn remPhysCube(cube: *cbe.Cube) void {
     phys.body_interface.removeAndDestroyBody(cube.phys_body);
     phys.physics_system.optimizeBroadPhase();
-
 }
 
-/// Process 
-pub fn procCube(cube : *cbe.Cube, torque : @Vector(3, f32)) void {
-    
+/// Process
+pub fn procCube(cube: *cbe.Cube, torque: @Vector(3, f32)) void {
     const max_ang = 12.0;
 
     //var write_lock: zph.BodyLockWrite = .{};
@@ -121,44 +126,41 @@ pub fn procCube(cube : *cbe.Cube, torque : @Vector(3, f32)) void {
     //defer write_lock.unlock();
     //const body = write_lock.body.?;
     const cur_ang = phys.body_interface.getAngularVelocity(cube.phys_body);
-    const ang_mag = @abs(cur_ang[0]) + @abs(cur_ang[2])  + @abs(cur_ang[1]);
+    const ang_mag = @abs(cur_ang[0]) + @abs(cur_ang[2]) + @abs(cur_ang[1]);
     if (ang_mag < max_ang)
         phys.body_interface.addTorque(cube.phys_body, torque);
     //phys.body_interface.addForce(cube.phys_body, torque);
-
 
     //std.debug.print("cube {s}\n", .{if (phys.body_interface.isAdded(cube.phys_body)) "true" else "false"});
     const pos = phys.body_interface.getPosition(cube.phys_body);
     const rot = phys.body_interface.getRotation(cube.phys_body);
 
     cube.euclid.position.setAxial(tpe.Float3{
-        .x = pos[0], 
-        .y = pos[1], 
+        .x = pos[0],
+        .y = pos[1],
         .z = pos[2],
-        });
+    });
     cube.euclid.rotation = zmt.Quat{
         rot[0],
         rot[1],
         rot[2],
         rot[3],
-        };
+    };
 
-         
     // if (zphysics.tryGetBody(phys.physics_system.tryGetBodies(), cube.phys_body)) |body|
     // {
     //     std.debug.print("{d}\n", .{body.getCollisionGroup().group_id});
     // }
 }
 
-
 /// Necessary for ZPhysics/Jolt
 const BroadPhaseLayerInterface = extern struct {
-    usingnamespace zphysics.BroadPhaseLayerInterface.Methods(@This());
-    __v: *const zphysics.BroadPhaseLayerInterface.VTable = &vtable,
+    usingnamespace zph.BroadPhaseLayerInterface.Methods(@This());
+    __v: *const zph.BroadPhaseLayerInterface.VTable = &vtable,
 
-    object_to_broad_phase: [object_layers.len]zphysics.BroadPhaseLayer = undefined,
+    object_to_broad_phase: [object_layers.len]zph.BroadPhaseLayer = undefined,
 
-    const vtable = zphysics.BroadPhaseLayerInterface.VTable{
+    const vtable = zph.BroadPhaseLayerInterface.VTable{
         .getNumBroadPhaseLayers = _getNumBroadPhaseLayers,
         .getBroadPhaseLayer = _getBroadPhaseLayer,
     };
@@ -170,14 +172,14 @@ const BroadPhaseLayerInterface = extern struct {
         return layer_interface;
     }
 
-    fn _getNumBroadPhaseLayers(_: *const zphysics.BroadPhaseLayerInterface) callconv(.C) u32 {
+    fn _getNumBroadPhaseLayers(_: *const zph.BroadPhaseLayerInterface) callconv(.C) u32 {
         return broad_phase_layers.len;
     }
 
     fn _getBroadPhaseLayer(
-        iself: *const zphysics.BroadPhaseLayerInterface,
-        layer: zphysics.ObjectLayer,
-    ) callconv(.C) zphysics.BroadPhaseLayer {
+        iself: *const zph.BroadPhaseLayerInterface,
+        layer: zph.ObjectLayer,
+    ) callconv(.C) zph.BroadPhaseLayer {
         const self = @as(*const BroadPhaseLayerInterface, @ptrCast(iself));
         return self.object_to_broad_phase[layer];
     }
@@ -185,15 +187,15 @@ const BroadPhaseLayerInterface = extern struct {
 
 /// Necessary for ZPhysics/Jolt
 const ObjectVsBroadPhaseLayerFilter = extern struct {
-    usingnamespace zphysics.ObjectVsBroadPhaseLayerFilter.Methods(@This());
-    __v: *const zphysics.ObjectVsBroadPhaseLayerFilter.VTable = &vtable,
+    usingnamespace zph.ObjectVsBroadPhaseLayerFilter.Methods(@This());
+    __v: *const zph.ObjectVsBroadPhaseLayerFilter.VTable = &vtable,
 
-    const vtable = zphysics.ObjectVsBroadPhaseLayerFilter.VTable{ .shouldCollide = _shouldCollide };
+    const vtable = zph.ObjectVsBroadPhaseLayerFilter.VTable{ .shouldCollide = _shouldCollide };
 
     fn _shouldCollide(
-        _: *const zphysics.ObjectVsBroadPhaseLayerFilter,
-        layer1: zphysics.ObjectLayer,
-        layer2: zphysics.BroadPhaseLayer,
+        _: *const zph.ObjectVsBroadPhaseLayerFilter,
+        layer1: zph.ObjectLayer,
+        layer2: zph.BroadPhaseLayer,
     ) callconv(.C) bool {
         return switch (layer1) {
             object_layers.non_moving => layer2 == broad_phase_layers.moving,
@@ -205,15 +207,15 @@ const ObjectVsBroadPhaseLayerFilter = extern struct {
 
 /// Necessary for ZPhysics/Jolt
 const ObjectLayerPairFilter = extern struct {
-    usingnamespace zphysics.ObjectLayerPairFilter.Methods(@This());
-    __v: *const zphysics.ObjectLayerPairFilter.VTable = &vtable,
+    usingnamespace zph.ObjectLayerPairFilter.Methods(@This());
+    __v: *const zph.ObjectLayerPairFilter.VTable = &vtable,
 
-    const vtable = zphysics.ObjectLayerPairFilter.VTable{ .shouldCollide = _shouldCollide };
+    const vtable = zph.ObjectLayerPairFilter.VTable{ .shouldCollide = _shouldCollide };
 
     fn _shouldCollide(
-        _: *const zphysics.ObjectLayerPairFilter,
-        object1: zphysics.ObjectLayer,
-        object2: zphysics.ObjectLayer,
+        _: *const zph.ObjectLayerPairFilter,
+        object1: zph.ObjectLayer,
+        object2: zph.ObjectLayer,
     ) callconv(.C) bool {
         return switch (object1) {
             object_layers.non_moving => object2 == object_layers.moving,
@@ -225,22 +227,22 @@ const ObjectLayerPairFilter = extern struct {
 
 /// Necessary for ZPhysics/Jolt
 const ContactListener = extern struct {
-    usingnamespace zphysics.ContactListener.Methods(@This());
-    __v: *const zphysics.ContactListener.VTable = &vtable,
+    usingnamespace zph.ContactListener.Methods(@This());
+    __v: *const zph.ContactListener.VTable = &vtable,
     //system: *phys. SystemState,
 
-    const vtable = zphysics.ContactListener.VTable{
+    const vtable = zph.ContactListener.VTable{
         .onContactValidate = _onContactValidate,
         .onContactAdded = _onContactAdded,
     };
 
     fn _onContactValidate(
-        iself: *zphysics.ContactListener,
-        body1: *const zphysics.Body,
-        body2: *const zphysics.Body,
-        base_offset: *const [3]zphysics.Real,
-        collision_result: *const zphysics.CollideShapeResult,
-    ) callconv(.C) zphysics.ValidateResult {
+        iself: *zph.ContactListener,
+        body1: *const zph.Body,
+        body2: *const zph.Body,
+        base_offset: *const [3]zph.Real,
+        collision_result: *const zph.CollideShapeResult,
+    ) callconv(.C) zph.ValidateResult {
         _ = iself;
         _ = body1;
         _ = body2;
@@ -250,31 +252,64 @@ const ContactListener = extern struct {
     }
 
     fn _onContactAdded(
-        iself: *zphysics.ContactListener,
-        body1: *const zphysics.Body,
-        body2: *const zphysics.Body,
-        manifold: *const zphysics.ContactManifold,
-        settings: *zphysics.ContactSettings,
+        iself: *zph.ContactListener,
+        body1: *const zph.Body,
+        body2: *const zph.Body,
+        manifold: *const zph.ContactManifold,
+        settings: *zph.ContactSettings,
     ) callconv(.C) void {
         _ = settings;
         _ = manifold;
-        _ = body2;
-        _ = body1;
         const self = @as(*const ContactListener, @ptrCast(iself));
         _ = self;
-        std.debug.print("Hullo\n", .{});
-       
+        const cube_1 = &lvl.active_level.cubes.items[body1.user_data];
+        const cube_2 = &lvl.active_level.cubes.items[body2.user_data];
+
+        const type_1 = cube_1.cube_type;
+        const type_2 = cube_2.cube_type;
+
+        if (type_1 == cbe.CubeType.player or type_2 == cbe.CubeType.player) {
+            var a: *cbe.Cube = undefined;
+            var b: *cbe.Cube = undefined;
+            if (type_1 == cbe.CubeType.player) {
+                a = cube_1;
+                b = cube_2;
+            } else {
+                a = cube_2;
+                b = cube_1;
+            }
+
+            switch (b.cube_type) {
+                cbe.CubeType.enemy => {
+                    std.debug.print("Game Over\n", .{});
+                    lvl.active_level.lvl_state = lvl.LevelState.failed;
+                },
+                cbe.CubeType.coin => {
+                    if (b.cube_state == 3) {
+                        b.cube_state = 0;
+                        lvl.active_level.cur_score += 1;
+                        std.debug.print("Kaching! Level Score: {}\n", .{lvl.active_level.cur_score});
+                    }
+                },
+                cbe.CubeType.endgate => {
+                    std.debug.print("You're Winner!\n", .{});
+                    lvl.active_level.lvl_state = lvl.LevelState.succeeded;
+                },
+
+                else => {},
+            }
+        }
     }
 };
 
 const object_layers = struct {
-    const non_moving: zphysics.ObjectLayer = 0;
-    const moving: zphysics.ObjectLayer = 1;
+    const non_moving: zph.ObjectLayer = 0;
+    const moving: zph.ObjectLayer = 1;
     const len: u32 = 2;
 };
 
 const broad_phase_layers = struct {
-    const non_moving: zphysics.BroadPhaseLayer = 0;
-    const moving: zphysics.BroadPhaseLayer = 1;
+    const non_moving: zph.BroadPhaseLayer = 0;
+    const moving: zph.BroadPhaseLayer = 1;
     const len: u32 = 2;
 };

@@ -113,7 +113,7 @@ pub fn proc() !bool {
         try evt.processEvents();
 
     //Process physics
-    if (getState(EngineState.physics)) {
+    if (getState(EngineState.physics) and lvl.active_level.lvl_state == lvl.LevelState.playing) {
         phy.proc();
     }
 
@@ -121,20 +121,21 @@ pub fn proc() !bool {
     if (getState(EngineState.playing)) {
         const cubes = lvl.active_level.cubes;
         for (cubes.items) |*c| {
-            switch (c.cube_type) {
-                cbe.CubeType.ground => {},
-                cbe.CubeType.player => {
-                    cnt.procPlayer(c);
-                },
-                cbe.CubeType.enemy => {
-                    cnt.procEnemy(c);
-                },
-                cbe.CubeType.coin => {},
-                cbe.CubeType.endgate => {},
-                cbe.CubeType.spotlight => {},
-                cbe.CubeType.trigger => {},
-                cbe.CubeType.empty => {},
-            }
+            if ((c.cube_state & @intFromEnum(cbe.CubeState.active)) > 1)
+                switch (c.cube_type) {
+                    cbe.CubeType.ground => {},
+                    cbe.CubeType.player => {
+                        cnt.procPlayer(c);
+                    },
+                    cbe.CubeType.enemy => {
+                        cnt.procEnemy(c);
+                    },
+                    cbe.CubeType.coin => cnt.procCoin(c),
+                    cbe.CubeType.endgate => {},
+                    cbe.CubeType.spotlight => {},
+                    cbe.CubeType.trigger => {},
+                    cbe.CubeType.empty => {},
+                };
         }
     }
 

@@ -69,6 +69,12 @@ pub fn procPlayer(cube: *cbe.Cube) void {
     // cube.euclid.position.setAxial(tpe.Float3.init(position[0], position[1], position[2]));
 }
 
+// does not adjust the physical collider
+pub fn procCoin(cube: *cbe.Cube) void {
+    if (lvl.active_level.lvl_state == lvl.LevelState.playing)
+        cube.euclid.rotation = zmt.qmul(cube.euclid.rotation, csm.convEulToQuat(csm.Vec3{ 0, 0, 0.07 }));
+}
+
 pub fn procEnemy(cube: *cbe.Cube) void {
     // a rotational magnitude
     const rot_mag = 10000.0;

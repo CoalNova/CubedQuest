@@ -49,7 +49,10 @@ pub fn render() !void {
             _ = checkGLErrorState("Draw Elements");
         }
         // for each cube
-        for (lvl.active_level.cubes.items) |cube| {
+        render_block: for (lvl.active_level.cubes.items) |cube| {
+            //skip if inactive
+            if ((cube.cube_state & @intFromEnum(cbe.CubeState.enabled)) == 0)
+                continue :render_block;
             const mesh: *msh.Mesh = msh.meshes.peek(cube.mesh_index);
             const material: *mat.Material = mat.materials.peek(mesh.material_index);
             const shader: *shd.Shader = shd.shaders.peek(material.shader_index);

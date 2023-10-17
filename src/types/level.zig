@@ -104,18 +104,18 @@ pub fn generateLevel(level: Level) !void {
     // unload active, just in case
     if (active_level.lvl_state != LevelState.degenerateded)
         unloadActiveLevel();
-    var active = RunningLevel{};
-    active.amb_color.fromUIntArray(level.amb_color, 255.0);
-    active.sun_color.fromUIntArray(level.sun_color, 255.0);
-    active.sky_color.fromUIntArray(level.sky_color, 255.0);
-    active.cubes = try sys.allocator.alloc(cbe.Cube, level.ogds.len);
+    active_level = RunningLevel{};
+    active_level.amb_color.fromUIntArray(level.amb_color, 255.0);
+    active_level.sun_color.fromUIntArray(level.sun_color, 255.0);
+    active_level.sky_color.fromUIntArray(level.sky_color, 255.0);
+    active_level.cubes = std.ArrayList(cbe.Cube).init(sys.allocator);
     for (level.ogds, 0..) |ogd, i| {
-        active.cubes.appendAssumeCapacity(cbe.createCube(ogd, i));
-        if ((ogd.data & 7) == @intFromEnum(cbe.CubeType.coin))
-            active.max_score += 1;
+        try active_level.cubes.append(try cbe.createCube(ogd, @intCast(i)));
+        if (ogd.cube_type == @intFromEnum(cbe.CubeType.coin))
+            active_level.max_score += 1;
     }
-    active.sun_direction.fromUIntArray(level.sun_direction, 255.0);
-    active.lvl_state = LevelState.generated;
+    active_level.sun_direction.fromUIntArray(level.sun_direction, 255.0);
+    active_level.lvl_state = LevelState.generated;
 }
 
 pub fn convertActive() Level {}
@@ -135,78 +135,93 @@ pub fn unloadActiveLevel() void {
     active_level.lvl_state = LevelState.degenerateded;
 }
 
-///Loads a debug first level, for testing and such
-pub fn loadDebugLevel() !RunningLevel {
-    var level: RunningLevel = .{};
-
-    level.name = "Level 1";
-
-    level.cubes = std.ArrayList(cbe.Cube).init(sys.allocator);
-    level.links = std.ArrayList(Link).init(sys.allocator);
-
-    var ogd = cbe.OGD{
-        .cube_type = @intFromEnum(cbe.CubeType.player),
-        .cube_paint = @intFromEnum(cbe.CubePaint.player),
-        .pos_z = 134,
-        .pos_x = 125,
+/// DEBUG
+/// Loads a debug first level, for testing and such
+pub fn loadDebugLevel() !void {
+    var name = [_]u8{ 'L', 'e', 'v', 'e', 'l', ' ', '1' };
+    var ogds = [_]cbe.OGD{
+        cbe.OGD{
+            .cube_type = @intFromEnum(cbe.CubeType.player),
+            .cube_paint = @intFromEnum(cbe.CubePaint.player),
+            .pos_z = 128,
+            .pos_x = 120,
+        },
+        cbe.OGD{
+            .cube_type = @intFromEnum(cbe.CubeType.enemy),
+            .cube_paint = @intFromEnum(cbe.CubePaint.enemy),
+            .pos_z = 128,
+            .pos_x = 136,
+        },
+        cbe.OGD{
+            .pos_z = 126,
+            .sca_x = 4,
+            .sca_y = 4,
+            .sca_z = 0,
+        },
+        cbe.OGD{
+            .cube_paint = @intFromEnum(cbe.CubePaint.wall),
+            .pos_y = 144,
+            .sca_x = 4,
+            .sca_z = 1,
+        },
+        cbe.OGD{
+            .cube_paint = @intFromEnum(cbe.CubePaint.wall),
+            .pos_y = 112,
+            .sca_x = 4,
+            .sca_z = 1,
+        },
+        cbe.OGD{
+            .cube_paint = @intFromEnum(cbe.CubePaint.wall),
+            .pos_x = 144,
+            .sca_y = 4,
+            .sca_z = 1,
+        },
+        cbe.OGD{
+            .cube_paint = @intFromEnum(cbe.CubePaint.wall),
+            .pos_x = 112,
+            .sca_y = 4,
+            .sca_z = 1,
+        },
+        cbe.OGD{
+            .cube_paint = @intFromEnum(cbe.CubePaint.coin),
+            .cube_type = @intFromEnum(cbe.CubeType.coin),
+            .pos_y = 120,
+            .pos_z = 129,
+        },
+        cbe.OGD{
+            .cube_paint = @intFromEnum(cbe.CubePaint.coin),
+            .cube_type = @intFromEnum(cbe.CubeType.coin),
+            .pos_y = 138,
+            .pos_x = 138,
+            .pos_z = 129,
+        },
+        cbe.OGD{
+            .cube_paint = @intFromEnum(cbe.CubePaint.coin),
+            .cube_type = @intFromEnum(cbe.CubeType.coin),
+            .pos_x = 114,
+            .pos_z = 129,
+        },
+        cbe.OGD{
+            .cube_paint = @intFromEnum(cbe.CubePaint.glass),
+            .pos_z = 129,
+            .sca_y = 2,
+            .sca_x = 2,
+            .sca_z = 1,
+            .rot_z = 6,
+        },
+        cbe.OGD{
+            .cube_type = @intFromEnum(cbe.CubeType.endgate),
+            .pos_x = 142,
+            .pos_z = 128,
+        },
     };
-    try level.cubes.append(try cbe.createCube(ogd, 0));
-    ogd = cbe.OGD{
-        .pos_z = 126,
-        .sca_x = 4,
-        .sca_y = 4,
-        .sca_z = 0,
+    var level = Level{
+        .name = &name,
+        .sky_color = [_]u8{ 80, 95, 160, 255 },
+        .sun_color = [_]u8{ 0, 255, 0, 255 },
+        .amb_color = [_]u8{ 0, 0, 255, 255 },
+        .ogds = &ogds,
     };
-    try level.cubes.append(try cbe.createCube(ogd, 1));
-
-    ogd = cbe.OGD{
-        .cube_paint = @intFromEnum(cbe.CubePaint.wall),
-        .pos_y = 144,
-        .sca_x = 4,
-        .sca_z = 1,
-    };
-    try level.cubes.append(try cbe.createCube(ogd, 2));
-    ogd = cbe.OGD{
-        .cube_paint = @intFromEnum(cbe.CubePaint.wall),
-        .pos_y = 112,
-        .sca_x = 4,
-        .sca_z = 1,
-    };
-    try level.cubes.append(try cbe.createCube(ogd, 3));
-
-    ogd = cbe.OGD{
-        .cube_paint = @intFromEnum(cbe.CubePaint.wall),
-        .pos_x = 144,
-        .sca_y = 4,
-        .sca_z = 1,
-    };
-    try level.cubes.append(try cbe.createCube(ogd, 4));
-
-    ogd = cbe.OGD{
-        .cube_paint = @intFromEnum(cbe.CubePaint.wall),
-        .pos_x = 112,
-        .sca_y = 4,
-        .sca_z = 1,
-    };
-    try level.cubes.append(try cbe.createCube(ogd, 5));
-
-    ogd = cbe.OGD{
-        .cube_type = @intFromEnum(cbe.CubeType.enemy),
-        .cube_paint = @intFromEnum(cbe.CubePaint.enemy),
-        .pos_z = 130,
-        .pos_x = 138,
-    };
-    try level.cubes.append(try cbe.createCube(ogd, 7));
-
-    ogd = cbe.OGD{
-        .cube_paint = @intFromEnum(cbe.CubePaint.glass),
-        .pos_z = 129,
-        .sca_y = 1,
-        .sca_x = 1,
-        .sca_z = 1,
-        .rot_z = 6,
-    };
-    try level.cubes.append(try cbe.createCube(ogd, 6));
 
     const camera = &wnd.windows.items[0].camera;
     camera.euclid.position.addAxial(.{ .x = 0.0, .y = -8.0, .z = 522.0 });
@@ -214,7 +229,5 @@ pub fn loadDebugLevel() !RunningLevel {
         csm.Vec3{ 0.0, 0.8, 0.0 },
     ));
     camera.field_of_view = 1.6;
-    level.sky_color = tpe.Float4.init(0.2, 0.3, 0.8, 1.0);
-
-    return level;
+    return try generateLevel(level);
 }
