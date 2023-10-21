@@ -25,8 +25,9 @@ pub fn initalizeGL() !void {
     zgl.clearColor(0.01, 0.0, 0.02, 1.0);
 
     zgl.getIntegerv(zgl.MAX_ARRAY_TEXTURE_LAYERS, &max_tex_array_layers);
-
+    std.log.info("Max Texture Array Layer Depth: {}", .{max_tex_array_layers});
     zgl.getIntegerv(zgl.MAX_TEXTURE_IMAGE_UNITS, &max_tex_binding_points);
+    std.log.info("Max Texture Binding Points: {}", .{max_tex_binding_points});
 }
 
 /// Toggles Wireframe rendering state

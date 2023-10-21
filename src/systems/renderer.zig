@@ -12,6 +12,18 @@ const mat = @import("../assets/material.zig");
 const shd = @import("../assets/shader.zig");
 const cbe = @import("../objects/cube.zig");
 
+var skymesh: usize = 0;
+var ui_buffer: u32 = 0;
+var ui_render_buffer: u32 = 0;
+
+pub fn init() !void {
+    skymesh = try msh.meshes.fetch(1);
+}
+
+pub fn deinit() void {
+    msh.meshes.release(1);
+}
+
 /// The Rendering Function
 pub fn render() !void {
 
@@ -109,6 +121,12 @@ pub fn render() !void {
     }
 }
 
+pub fn updateUIBuffer() !void {
+    zdl.gl.bindRenderbuffer(zdl.gl.READ_FRAMEBUFFER, ui_render_buffer);
+    zdl.gl.bindFramebuffer(zdl.gl.DRAW_FRAMEBUFFER, 0);
+    zdl.gl.blitFramebuffer(0, 0, 1024, 1024, 0, 0, 1024, 1024, zdl.gl.COLOR_BUFFER_BIT, zdl.gl.NEAREST);
+}
+
 /// Get Proc Address
 pub fn getProcAddress(name: [:0]const u8) ?*const anyopaque {
     // get proc address
@@ -161,14 +179,4 @@ pub fn getGLErrorString(gl_error_enum_value: u32) []const u8 {
         },
     }
     unreachable;
-}
-
-var skymesh: usize = 0;
-
-pub fn initSky() !void {
-    skymesh = try msh.meshes.fetch(1);
-}
-
-pub fn deinitSky() void {
-    msh.meshes.release(1);
 }

@@ -1,3 +1,5 @@
 libs
 zig*
 *.log
+*.dds
+assets

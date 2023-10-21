@@ -9,6 +9,7 @@ const cbe = @import("../objects/cube.zig");
 const tpe = @import("../types/types.zig");
 const wnd = @import("../types/window.zig");
 const lvl = @import("../types/level.zig");
+const chr = @import("../systems/chrono.zig");
 
 /// An Associated Event.Input Map
 const InputMap = struct {
@@ -32,12 +33,6 @@ pub var inputmaps = [_]InputMap{
     },
 };
 
-// But I'm just... a gnome
-pub fn noFun(self: *cbe.Cube, mag: f32) void {
-    _ = mag;
-    _ = self;
-}
-
 /// Everything here is wrong
 /// just thought you should know
 pub fn procPlayer(cube: *cbe.Cube) void {
@@ -57,22 +52,14 @@ pub fn procPlayer(cube: *cbe.Cube) void {
     euler *= csm.Vec3{ rot_mag, rot_mag, rot_mag };
 
     phy.procCube(cube, euler);
-    // cube.phys_body.applyBodyTorque(&[_]f32{
-    //     euler[1],
-    //     euler[0],
-    //     euler[2],
-    // });
-
-    // var rotation: zmt.Quat = undefined;
-    // var position: csm.Vec3 = undefined;
-    // cube.euclid.rotation = rotation;
-    // cube.euclid.position.setAxial(tpe.Float3.init(position[0], position[1], position[2]));
 }
 
 // does not adjust the physical collider
 pub fn procCoin(cube: *cbe.Cube) void {
-    if (lvl.active_level.lvl_state == lvl.LevelState.playing)
-        cube.euclid.rotation = zmt.qmul(cube.euclid.rotation, csm.convEulToQuat(csm.Vec3{ 0, 0, 0.07 }));
+    if (lvl.active_level.lvl_state == lvl.LevelState.playing) {
+        const delta = chr.frameDelta();
+        cube.euclid.rotation = zmt.qmul(cube.euclid.rotation, csm.convEulToQuat(csm.Vec3{ 0, 0, 1 * delta }));
+    }
 }
 
 pub fn procEnemy(cube: *cbe.Cube) void {
@@ -101,15 +88,4 @@ pub fn procEnemy(cube: *cbe.Cube) void {
 
     euler *= csm.Vec3{ rot_mag, rot_mag, rot_mag };
     phy.procCube(cube, euler);
-    // cube.phys_body.applyBodyTorque(&[_]f32{
-    //     euler[1] * rot_mag * 1.3,
-    //     -euler[0] * rot_mag * 1.3,
-    //     euler[2] * rot_mag * 1.3,
-    // });
-
-    // var rotation: zmt.Quat = undefined;
-    // var position: csm.Vec3 = undefined;
-
-    // cube.euclid.rotation = rotation;
-    // cube.euclid.position.setAxial(tpe.Float3.init(position[0], position[1], position[2]));
 }

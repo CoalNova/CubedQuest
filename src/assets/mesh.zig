@@ -63,6 +63,6 @@ fn addMesh(mesh_id: u32) Mesh {
     return mesh;
 }
 fn remMesh(mesh: *Mesh) void {
-    _ = mesh;
-    mat.materials.release(0);
+    const material = mat.materials.peek(mesh.material_index);
+    mat.materials.release(material.id);
 }

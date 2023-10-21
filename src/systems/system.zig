@@ -16,6 +16,7 @@ const shd = @import("../assets/shader.zig");
 const gls = @import("../systems/glsystem.zig");
 const cbe = @import("../objects/cube.zig");
 const cnt = @import("../systems/controller.zig");
+const chr = @import("../systems/chrono.zig");
 
 // Allocator
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -69,6 +70,10 @@ pub fn init() !void {
 
     // initialize physics
     try phy.init();
+    std.log.info("Physics engine initialized successfully.", .{});
+
+    try chr.init();
+    std.log.info("Frame timer initialized", .{});
 
     //TODO move window count/name/configuration over to configurable options
     try wnd.createNewWindow(
@@ -78,12 +83,15 @@ pub fn init() !void {
     );
 
     // init sky
-    try rnd.initSky();
+    try rnd.init();
 
     // set engine flags to everything we need
     setStateOn(EngineState.alive);
     setStateOn(EngineState.events);
     setStateOn(EngineState.playing);
+
+    // DEBUG
+    try zdl.gl.setSwapInterval(1);
 }
 
 /// Deinitialize Engine
@@ -91,7 +99,9 @@ pub fn deinit() void {
     //unload active level, deleting assets
     lvl.unloadActiveLevel();
 
-    rnd.deinitSky();
+    rnd.deinit();
+
+    chr.deinit();
 
     //
     msh.meshes.deinit();
@@ -108,14 +118,10 @@ pub fn deinit() void {
 /// Run a single frame, returns engine alive flag
 /// TODO catch all failures internally
 pub fn proc() !bool {
+
     //set from events
     if (getState(EngineState.events))
         try evt.processEvents();
-
-    //Process physics
-    if (getState(EngineState.physics) and lvl.active_level.lvl_state == lvl.LevelState.playing) {
-        phy.proc();
-    }
 
     //Run through loaded items for events
     if (getState(EngineState.playing)) {
@@ -138,6 +144,12 @@ pub fn proc() !bool {
                 };
         }
     }
+    //Process physics
+    if (getState(EngineState.physics) and lvl.active_level.lvl_state == lvl.LevelState.playing) {
+        try phy.proc();
+    }
+
+    try chr.proc();
 
     //run all extra scripts
     //TODO script centralization
@@ -146,7 +158,12 @@ pub fn proc() !bool {
     if (getState(EngineState.render))
         try rnd.render();
 
+    const s_div = 4;
+    const fps = try chr.pollFPSCounter(s_div);
+    if (fps > 0)
+        std.debug.print("FPS: {}\r", .{fps * s_div});
+
     //have a merry old time
-    zdl.delay(15);
+    //zdl.delay(1);
     return getState(EngineState.alive);
 }

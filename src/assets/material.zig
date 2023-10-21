@@ -24,6 +24,6 @@ fn addMaterial(material_id: u32) Material {
 }
 
 fn remMaterial(material: *Material) void {
-    _ = material;
-    shd.shaders.release(0);
+    const shader = shd.shaders.peek(material.shader_index);
+    shd.shaders.release(shader.id);
 }

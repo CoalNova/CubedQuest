@@ -6,6 +6,7 @@ const sys = @import("../systems/system.zig");
 const cbe = @import("../objects/cube.zig");
 const tpe = @import("../types/types.zig");
 const lvl = @import("../types/level.zig");
+const chr = @import("../systems/chrono.zig");
 
 // allocator appropriate for physics?
 var a_a = std.heap.ArenaAllocator.init(sys.allocator);
@@ -61,6 +62,7 @@ pub fn init() !void {
     phys.lock_interface = phys.physics_system.getBodyLockInterface();
     std.log.info("ZPhysics (Jolt) initialized successfully", .{});
     sys.setStateOn(sys.EngineState.physics);
+    then = try std.time.Instant.now();
 }
 
 /// Deinitilaize Physics World
@@ -70,12 +72,13 @@ pub fn deinit() void {
     zph.deinit();
 }
 
+var then: std.time.Instant = undefined;
+
 /// Process Physworld
 /// TODO proper timing on physics steps
-pub fn proc() void {
-    phys.physics_system.update(1.0 / 60.0, .{}) catch unreachable;
-    //phys.contact_listener.onContactAdded()
-    //phys.body_interface.
+pub fn proc() !void {
+    const delta_time = chr.frameDelta();
+    try phys.physics_system.update(delta_time, .{});
 }
 
 /// Generate a phys cube and add new cube to the physics blob

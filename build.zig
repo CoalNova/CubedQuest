@@ -8,6 +8,34 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // optional windows build setup
+
+    // const win_target = std.zig.CrossTarget{ .os_tag = .windows, .cpu_arch = .x86_64 };
+    // const win_exe = b.addExecutable(.{
+    // .name = "CubedQuest",
+    // .root_source_file = .{ .path = "src/main.zig" },
+    // .target = win_target,
+    // .optimize = optimize,
+    // });
+    // const win_zsdl_pkg = zsdl.package(b, win_target, optimize, .{});
+    // const win_zopengl_pkg = zopengl.package(b, win_target, optimize, .{});
+    // const win_zmath_pkg = zmath.package(b, win_target, optimize, .{
+    // .options = .{ .enable_cross_platform_determinism = true },
+    // });
+    // const win_zphysics_pkg = zphysics.package(b, win_target, optimize, .{
+    // .options = .{
+    // .use_double_precision = false,
+    // .enable_cross_platform_determinism = true,
+    // },
+    // });
+
+    // win_zphysics_pkg.link(win_exe);
+    // win_zsdl_pkg.link(win_exe);
+    // win_zmath_pkg.link(win_exe);
+    // win_zopengl_pkg.link(win_exe);
+
+    // b.installArtifact(win_exe);
+
     const exe = b.addExecutable(.{
         .name = "cubedquest",
         .root_source_file = .{ .path = "src/main.zig" },
