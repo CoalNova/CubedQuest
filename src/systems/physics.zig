@@ -149,10 +149,6 @@ pub fn procCube(cube: *cbe.Cube, torque: zmt.F32x4, torque_mag: f32, max_ang_mag
         rot[3],
     };
 
-    // if (zphysics.tryGetBody(phys.physics_system.tryGetBodies(), cube.phys_body)) |body|
-    // {
-    //     std.debug.print("{d}\n", .{body.getCollisionGroup().group_id});
-    // }
 }
 
 /// Necessary for ZPhysics/Jolt

@@ -28,6 +28,8 @@ pub const Shader = struct {
     amc_name: i32 = -1, // "ambientChroma"
     cra_name: i32 = -1, // "colorA"
     crb_name: i32 = -1, // "colorB"
+    t0i_name: i32 = -1, // "tex0Index"
+    t0o_name: i32 = -1, // "tex0Offset"
 
 };
 
@@ -125,23 +127,10 @@ fn addShader(shader_id: u32) Shader {
     shader.amc_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("ambientChroma\x00")));
     shader.cra_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("colorA\x00")));
     shader.crb_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("colorB\x00")));
+    shader.t0i_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("tex0Index")));
+    shader.t0o_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("tex0Offset")));
 
     //if (shader.mtx_name > -1) std.debug.print("shader.mtx_name: {}\n", .{shader.mtx_name});
-    //if (shader.mdl_name > -1) std.debug.print("shader.mdl_name: {}\n", .{shader.mdl_name});
-    //if (shader.vpm_name > -1) std.debug.print("shader.vpm_name: {}\n", .{shader.vpm_name});
-    //if (shader.cam_name > -1) std.debug.print("shader.cam_name: {}\n", .{shader.cam_name});
-    //if (shader.rot_name > -1) std.debug.print("shader.rot_name: {}\n", .{shader.rot_name});
-    //if (shader.pst_name > -1) std.debug.print("shader.pst_name: {}\n", .{shader.pst_name});
-    //if (shader.bnd_name > -1) std.debug.print("shader.bnd_name: {}\n", .{shader.bnd_name});
-    //if (shader.ind_name > -1) std.debug.print("shader.ind_name: {}\n", .{shader.ind_name});
-    //if (shader.str_name > -1) std.debug.print("shader.str_name: {}\n", .{shader.str_name});
-    //if (shader.bse_name > -1) std.debug.print("shader.bse_name: {}\n", .{shader.bse_name});
-    //if (shader.ran_name > -1) std.debug.print("shader.ran_name: {}\n", .{shader.ran_name});
-    //if (shader.sun_name > -1) std.debug.print("shader.sun_name: {}\n", .{shader.sun_name});
-    //if (shader.aml_name > -1) std.debug.print("shader.aml_name: {}\n", .{shader.aml_name});
-    //if (shader.amc_name > -1) std.debug.print("shader.amc_name: {}\n", .{shader.amc_name});
-    //if (shader.cra_name > -1) std.debug.print("shader.cra_name: {}\n", .{shader.cra_name});
-    //if (shader.crb_name > -1) std.debug.print("shader.crb_name: {}\n", .{shader.crb_name});
 
     shader.subscribers = 1;
     return shader;
@@ -334,3 +323,30 @@ const sky_v_shader =
     \\
     \\}
 ;
+
+const box_f_shader = 
+    \\//BOX FRAGMENT SHADER
+    \\
+    \\uniform sampler2DArray tex0Index;
+    \\uniform sampler2DArray tex0Offset;
+    ;
+
+const box_g_shader = 
+    \\//BOX GEOMETRY SHADER
+    \\#version 330 core
+    \\
+    \\uniform vec4 bounds;
+    \\
+    \\void main() 
+    \\{
+    \\
+    \\}
+    ;
+
+const box_v_shader = 
+    \\//BOX VERTEX SHADER
+    \\#version 330 core
+    \\
+    \\void main(){}
+;
+

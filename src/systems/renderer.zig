@@ -18,14 +18,21 @@ var ui_render_buffer: u32 = 0;
 
 pub fn init() !void {
     skymesh = try msh.meshes.fetch(1);
+    zgl.genFramebuffers(1, &ui_buffer);
+    //zgl.bindFramebuffer(zgl.FRAMEBUFFER, ui_buffer);
+    zgl.genRenderbuffers(1, &ui_render_buffer);
+    //zgl.bindRenderbuffer(zgl.RENDERBUFFER, ui_render_buffer);
 }
 
 pub fn deinit() void {
     msh.meshes.release(1);
+    zgl.deleteFramebuffers(1, &ui_buffer);
+    zgl.deleteRenderbuffers(1, &ui_render_buffer);
 }
 
 /// The Rendering Function
 pub fn render() !void {
+
 
     // for all windows (just one)
     for (wnd.windows.items) |*w| {
