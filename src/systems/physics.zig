@@ -102,7 +102,7 @@ pub fn addPhysCube(cube: *cbe.Cube, index: u8) !void {
         .position = .{ axial.x, axial.y, axial.z, 1.0 }, // 4th element is ignored
         .rotation = .{ quat[0], quat[1], quat[2], quat[3] },
         .shape = box_shape,
-        .mass_properties_override = .{ .mass = 1.0 },
+        .mass_properties_override = .{ .mass = 2.0 },
         .allow_sleeping = false,
         .collision_group = phys.collision_group,
         .object_layer = if (cube.cube_type == cbe.CubeType.player or cube.cube_type == cbe.CubeType.enemy) object_layers.moving else object_layers.non_moving,
@@ -121,20 +121,19 @@ pub fn remPhysCube(cube: *cbe.Cube) void {
 }
 
 /// Process
-pub fn procCube(cube: *cbe.Cube, torque: @Vector(3, f32)) void {
-    const max_ang = 12.0;
+pub fn procCube(cube: *cbe.Cube, torque: zmt.F32x4, torque_mag: f32, max_ang_mag: f32) void {
+    //TODO fix this nonesense
 
-    //var write_lock: zph.BodyLockWrite = .{};
-    //write_lock.lock(phys.lock_interface, cube.phys_body);
-    //defer write_lock.unlock();
-    //const body = write_lock.body.?;
     const cur_ang = phys.body_interface.getAngularVelocity(cube.phys_body);
-    const ang_mag = @abs(cur_ang[0]) + @abs(cur_ang[2]) + @abs(cur_ang[1]);
-    if (ang_mag < max_ang)
-        phys.body_interface.addTorque(cube.phys_body, torque);
-    //phys.body_interface.addForce(cube.phys_body, torque);
+    const final_mag = torque * zmt.splat(zmt.F32x4, torque_mag) * zmt.F32x4{
+        @max(0.0, 1.0 - @abs(cur_ang[0]) / max_ang_mag),
+        @max(0.0, 1.0 - @abs(cur_ang[1]) / max_ang_mag),
+        0,
+        0,
+    };
+    const crank = @Vector(3, f32){ final_mag[0], final_mag[1], final_mag[2] };
+    phys.body_interface.addTorque(cube.phys_body, crank);
 
-    //std.debug.print("cube {s}\n", .{if (phys.body_interface.isAdded(cube.phys_body)) "true" else "false"});
     const pos = phys.body_interface.getPosition(cube.phys_body);
     const rot = phys.body_interface.getRotation(cube.phys_body);
 

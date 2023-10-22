@@ -36,22 +36,22 @@ pub var inputmaps = [_]InputMap{
 /// Everything here is wrong
 /// just thought you should know
 pub fn procPlayer(cube: *cbe.Cube) void {
-    // a rotational magnitude for testing inputs
-    const rot_mag = 10000.0; //1.0 / (std.math.pi * 10.0);
-    var euler = csm.Vec3{ 0, 0, 0 };
-
+    var x: f32 = 0;
     if (evt.getInputStay(inputmaps[0].input_forward))
-        euler += csm.Vec3{ -1.0, 0.0, 0.0 };
+        x -= 1;
     if (evt.getInputStay(inputmaps[0].input_backward))
-        euler += csm.Vec3{ 1.0, 0.0, 0.0 };
+        x += 1;
+
+    var y: f32 = 0;
     if (evt.getInputStay(inputmaps[0].input_leftward))
-        euler += csm.Vec3{ 0.0, -1.0, 0.0 };
+        y -= 1;
     if (evt.getInputStay(inputmaps[0].input_rightward))
-        euler += csm.Vec3{ 0.0, 1.0, 0.0 };
+        y += 1;
 
-    euler *= csm.Vec3{ rot_mag, rot_mag, rot_mag };
-
-    phy.procCube(cube, euler);
+    const theto = @max(@abs(x) + @abs(y), 1.0);
+    const euler = zmt.F32x4{ x / theto, y / theto, 0, 0 };
+    //euler = zmt.normalize3(euler);
+    phy.procCube(cube, euler, 10000.0, 10.0);
 }
 
 // does not adjust the physical collider
@@ -63,16 +63,16 @@ pub fn procCoin(cube: *cbe.Cube) void {
 }
 
 pub fn procEnemy(cube: *cbe.Cube) void {
-    // a rotational magnitude
-    const rot_mag = 10000.0;
-    var euler = csm.Vec3{ 0, 0, 0 };
+    var x: f32 = 0;
+    var y: f32 = 0;
     const self = cube.euclid.position.getAxial();
     target_block: {
         // find if linked a target
         for (lvl.active_level.links.items) |link| {
             if (link.source == cube.self_index) {
                 const target = lvl.active_level.cubes.items[link.destination].euclid.position.getAxial();
-                euler = csm.normalizeVec3(csm.Vec3{ self.x - target.x, self.y - target.y, 0 });
+                x = self.x - target.x;
+                y = self.y - target.y;
                 break :target_block;
             }
         }
@@ -80,12 +80,14 @@ pub fn procEnemy(cube: *cbe.Cube) void {
         for (lvl.active_level.cubes.items) |c| {
             if (c.cube_type == cbe.CubeType.player) {
                 const target = c.euclid.position.getAxial();
-                euler = csm.normalizeVec3(csm.Vec3{ self.y - target.y, -(self.x - target.x), 0 });
+                x = self.y - target.y;
+                y = -(self.x - target.x);
                 break :target_block;
             }
         }
     }
 
-    euler *= csm.Vec3{ rot_mag, rot_mag, rot_mag };
-    phy.procCube(cube, euler);
+    const theto = @max(1.0, @abs(x) + @abs(y));
+    var euler = zmt.F32x4{ x / theto, y / theto, 0, 0 };
+    phy.procCube(cube, euler, 10000.0, 10.0);
 }
