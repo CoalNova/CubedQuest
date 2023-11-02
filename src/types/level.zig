@@ -224,10 +224,10 @@ pub fn loadDebugLevel() !void {
     };
 
     const camera = &wnd.windows.items[0].camera;
-    camera.euclid.position.addAxial(.{ .x = 0.0, .y = -8.0, .z = 522.0 });
+    camera.euclid.position.addAxial(.{ .x = 0.0, .y = -16.0, .z = 527.0 });
     camera.euclid.rotation = zmt.qmul(wnd.windows.items[0].camera.euclid.rotation, csm.convEulToQuat(
-        csm.Vec3{ 0.0, 0.8, 0.0 },
+        csm.Vec3{ 0.0, 0.75, 0.0 },
     ));
-    camera.field_of_view = 1.6;
+    camera.field_of_view = 0.8;
     return try generateLevel(level);
 }

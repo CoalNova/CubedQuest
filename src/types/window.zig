@@ -3,7 +3,6 @@ const zgl = @import("zopengl");
 const zdl = @import("zsdl");
 const tps = @import("../types/types.zig");
 const sys = @import("../systems/system.zig");
-const rnd = @import("../systems/renderer.zig");
 const cam = @import("../objects/camera.zig");
 const tpe = @import("../types/types.zig");
 const gls = @import("../systems/glsystem.zig");

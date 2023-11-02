@@ -2,7 +2,7 @@ const std = @import("std");
 const zgl = @import("zopengl");
 const asc = @import("../assets/assetcollection.zig");
 const sys = @import("../systems/system.zig");
-const rnd = @import("../systems/renderer.zig");
+const rnd = @import("../render/renderer.zig");
 
 pub const Shader = struct {
     id: u32 = 0,
@@ -247,15 +247,15 @@ const cube_g_shader =
     \\  BuildFace(3, 0, 2, 1, vec3(0.0, 1.0f, 0.0f),   stride.zx);
     \\	BuildFace(2, 5, 7, 0, vec3(1.0f, 0.0f, 0.0f),  stride.zy); 
     \\	BuildFace(6, 1, 3, 4, vec3(-1.0f, 0.0f, 0.0f), stride.yz);
-    \\	BuildFace(6, 2, 7, 3, vec3(0.0f, 0.0f, -1.0f), stride.xy); 
+    \\	BuildFace(6, 2, 7, 3, vec3(0.0f, 0.0f, -1.0f), stride.yx); 
     \\	BuildFace(1, 5, 0, 4, vec3(0.0f, 0.0f, 1.0f),  stride.yx);
     \\	BuildFace(7, 4, 6, 5, vec3(0.0f, -1.0f, 0.0f), stride.xz);
     \\  
     \\  //draw outside
     \\	BuildFace(0, 3, 2, 1, vec3(0.0, 1.0f, 0.0f),   stride.zx);
     \\	BuildFace(5, 2, 7, 0, vec3(1.0f, 0.0f, 0.0f),  stride.zy); 
-    \\	BuildFace(1, 6, 3, 4, vec3(-1.0f, 0.0f, 0.0f), stride.yz);
-    \\	BuildFace(2, 6, 7, 3, vec3(0.0f, 0.0f, -1.0f), stride.xy); 
+    \\	BuildFace(1, 6, 3, 4, vec3(-1.0f, 0.0f, 0.0f), stride.zy);
+    \\	BuildFace(2, 6, 7, 3, vec3(0.0f, 0.0f, -1.0f), stride.yx); 
     \\	BuildFace(5, 1, 0, 4, vec3(0.0f, 0.0f, 1.0f),  stride.yx);
     \\	BuildFace(4, 7, 6, 5, vec3(0.0f, -1.0f, 0.0f), stride.xz);
     \\}
@@ -324,29 +324,61 @@ const sky_v_shader =
     \\}
 ;
 
-const box_f_shader = 
+const box_f_shader =
     \\//BOX FRAGMENT SHADER
     \\
     \\uniform sampler2DArray tex0Index;
-    \\uniform sampler2DArray tex0Offset;
-    ;
+    \\uniform int tex0Offset;
+    \\uniform vec4 colorA;
+    \\uniform vec4 colorB;
+    \\
+    \\in vec2 frag_uv;
+    \\
+    \\out vec4 frag_color;
+    \\
+    \\void main(){
+    \\  
+    \\}
+;
 
-const box_g_shader = 
+const box_g_shader =
     \\//BOX GEOMETRY SHADER
     \\#version 330 core
     \\
-    \\uniform vec4 bounds;
+    \\//xywh
+    \\//vvvv
+    \\//wxyz
+    \\uniform vec4 bounds; //box extents in screen-space coords
+    \\uniform float base; //layer
+    \\uniform vec4 index; //box uvs
+    \\
+    \\out vec2 frag_uv;
     \\
     \\void main() 
     \\{
+    \\  gl_Position = vec4(bounds.wx, base, 1.0f);
+    \\  frag_uv = index.wx;
+    \\  EmitVertex(); 
+    \\  gl_Position = vec4(bounds.w + bounds.y, bounds.x, base, 1.0f);
+    \\  EmitVertex(); 
+    \\  gl_Position = vec4(bounds.w + bounds.y, bounds.x + bounds.z, base, 1.0f);
+    \\  EmitVertex(); 
+    \\	EndPrimitive();
     \\
+    \\  gl_Position = vec4(bounds.wx, base, 1.0f);
+    \\  frag_uv = index.wx;
+    \\  EmitVertex(); 
+    \\  gl_Position = vec4(bounds.w + bounds.y, bounds.x + bounds.z, base, 1.0f);
+    \\  EmitVertex(); 
+    \\  gl_Position = vec4(bounds.w + bounds.y, bounds.x + bounds.z, base, 1.0f);
+    \\  EmitVertex(); 
+    \\	EndPrimitive();
     \\}
-    ;
+;
 
-const box_v_shader = 
+const box_v_shader =
     \\//BOX VERTEX SHADER
     \\#version 330 core
     \\
     \\void main(){}
 ;
-

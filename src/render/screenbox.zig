@@ -2,12 +2,14 @@ const std = @import("std");
 const sys = @import("../systems/system.zig");
 const msh = @import("../assets/mesh.zig");
 const tpe = @import("../types/types.zig");
+const zmt = @import("zmath");
 
 /// The box object drawn to the screen
 pub const ScreenBox = struct {
     mesh_id: usize = 0,
     contents: []u8 = undefined,
     bounds: tpe.Float4 = .{},
+    color: zmt.F32x4 = .{ 0, 0, 0, 0 },
 };
 
 /// Layout types available, number should align to []layouts index position

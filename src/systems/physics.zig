@@ -41,7 +41,7 @@ pub fn init() !void {
     phys.object_layer_pair_filter.* = .{};
     phys.contact_listener.* = .{};
 
-    try zph.init(sys.allocator, .{});
+    try zph.init(arena_allocator, .{});
     phys.physics_system = try zph.PhysicsSystem.create(
         @as(*const zph.BroadPhaseLayerInterface, @ptrCast(phys.broad_phase_layer_interface)),
         @as(*const zph.ObjectVsBroadPhaseLayerFilter, @ptrCast(phys.object_vs_broad_phase_layer_filter)),
@@ -54,7 +54,8 @@ pub fn init() !void {
         },
     );
 
-    phys.physics_system.setGravity(.{ 0, 0, -9.88 });
+    // multiplied by 1.3 for a weightier feel
+    phys.physics_system.setGravity(.{ 0, 0, -9.88 * 1.3 });
 
     phys.physics_system.setContactListener(phys.contact_listener);
 
@@ -148,7 +149,6 @@ pub fn procCube(cube: *cbe.Cube, torque: zmt.F32x4, torque_mag: f32, max_ang_mag
         rot[2],
         rot[3],
     };
-
 }
 
 /// Necessary for ZPhysics/Jolt

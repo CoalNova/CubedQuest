@@ -3,7 +3,7 @@ const zgl = @import("zopengl");
 const asc = @import("../assets/assetcollection.zig");
 const mat = @import("../assets/material.zig");
 const shd = @import("../assets/shader.zig");
-const rnd = @import("../systems/renderer.zig");
+const rnd = @import("../render/renderer.zig");
 
 pub const Mesh = struct {
     id: u32 = 0,

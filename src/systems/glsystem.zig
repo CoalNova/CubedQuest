@@ -1,7 +1,7 @@
 const std = @import("std");
 const zgl = @import("zopengl");
 const zdl = @import("zsdl");
-const rnd = @import("../systems/renderer.zig");
+const rnd = @import("../render/renderer.zig");
 
 /// Possible errors, stored here because hell if I know what I'm doing
 pub const GLSError = error{ GLInitFailed, GLValueOoB };

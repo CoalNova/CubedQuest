@@ -19,9 +19,10 @@ var ui_render_buffer: u32 = 0;
 pub fn init() !void {
     skymesh = try msh.meshes.fetch(1);
     zgl.genFramebuffers(1, &ui_buffer);
-    //zgl.bindFramebuffer(zgl.FRAMEBUFFER, ui_buffer);
+    zgl.bindFramebuffer(zgl.FRAMEBUFFER, ui_buffer);
     zgl.genRenderbuffers(1, &ui_render_buffer);
-    //zgl.bindRenderbuffer(zgl.RENDERBUFFER, ui_render_buffer);
+    zgl.bindRenderbuffer(zgl.RENDERBUFFER, ui_render_buffer);
+    zgl.bindFramebuffer(zgl.FRAMEBUFFER, 0);
 }
 
 pub fn deinit() void {
@@ -32,7 +33,6 @@ pub fn deinit() void {
 
 /// The Rendering Function
 pub fn render() !void {
-
 
     // for all windows (just one)
     for (wnd.windows.items) |*w| {
@@ -129,6 +129,12 @@ pub fn render() !void {
 }
 
 pub fn updateUIBuffer() !void {
+    //for each ui box in scene, check if updated per box?
+    //regardless, bind render buffer and render to it?
+    zgl.framebufferRenderbuffer(zgl.FRAMEBUFFER, zgl.COLOR_ATTACHMENT0, zgl.RENDERBUFFER, ui_render_buffer);
+}
+
+pub fn drawUIBuffer() !void {
     zdl.gl.bindRenderbuffer(zdl.gl.READ_FRAMEBUFFER, ui_render_buffer);
     zdl.gl.bindFramebuffer(zdl.gl.DRAW_FRAMEBUFFER, 0);
     zdl.gl.blitFramebuffer(0, 0, 1024, 1024, 0, 0, 1024, 1024, zdl.gl.COLOR_BUFFER_BIT, zdl.gl.NEAREST);
