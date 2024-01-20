@@ -27,7 +27,7 @@ pub fn proc() !void {
     fps_tick +|= 1;
     lock.lock();
     defer lock.unlock();
-    var now = try Instant.now();
+    const now = try Instant.now();
     delta = @as(f32, @floatFromInt(Instant.since(now, then))) * 1e-9;
     then = now;
 }

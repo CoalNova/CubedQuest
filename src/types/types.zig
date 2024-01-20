@@ -175,3 +175,16 @@ pub const Float6 = struct {
         this.z = simd[3];
     }
 };
+
+/// Boolean equals of matching types, does not match unlike types
+pub inline fn equals(a: anytype, b: anytype) bool {
+    if (@TypeOf(a) != @TypeOf(b))
+        unreachable;
+    switch (@TypeOf(a)) {
+        Point2 => return (a.x == b.x and a.y == b.y),
+        Point3 => return (a.x == b.x and a.y == b.y and a.z == b.z),
+        Point4 => return (a.w == b.w and a.x == b.x and a.y == b.y and a.z == b.z),
+        Point6 => return (a.u == b.u and a.v == b.v and a.w == b.w and a.x == b.x and a.y == b.y and a.z == b.z),
+        else => unreachable,
+    }
+}

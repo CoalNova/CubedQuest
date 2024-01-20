@@ -88,6 +88,6 @@ pub fn procEnemy(cube: *cbe.Cube) void {
     }
 
     const theto = @max(1.0, @abs(x) + @abs(y));
-    var euler = zmt.F32x4{ x / theto, y / theto, 0, 0 };
+    const euler = zmt.F32x4{ x / theto, y / theto, 0, 0 };
     phy.procCube(cube, euler, 12000.0, 10.0);
 }

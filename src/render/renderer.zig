@@ -11,24 +11,17 @@ const msh = @import("../assets/mesh.zig");
 const mat = @import("../assets/material.zig");
 const shd = @import("../assets/shader.zig");
 const cbe = @import("../objects/cube.zig");
+const rui = @import("../render/ui.zig");
 
 var skymesh: usize = 0;
-var ui_buffer: u32 = 0;
-var ui_render_buffer: u32 = 0;
 
 pub fn init() !void {
+    try rui.init();
     skymesh = try msh.meshes.fetch(1);
-    zgl.genFramebuffers(1, &ui_buffer);
-    zgl.bindFramebuffer(zgl.FRAMEBUFFER, ui_buffer);
-    zgl.genRenderbuffers(1, &ui_render_buffer);
-    zgl.bindRenderbuffer(zgl.RENDERBUFFER, ui_render_buffer);
-    zgl.bindFramebuffer(zgl.FRAMEBUFFER, 0);
 }
 
 pub fn deinit() void {
     msh.meshes.release(1);
-    zgl.deleteFramebuffers(1, &ui_buffer);
-    zgl.deleteRenderbuffers(1, &ui_render_buffer);
 }
 
 /// The Rendering Function
@@ -36,6 +29,7 @@ pub fn render() !void {
 
     // for all windows (just one)
     for (wnd.windows.items) |*w| {
+        // grab and initialize
         try zdl.gl.makeCurrent(w.sdl_window, w.gl_context);
 
         // get and set viewport from window bounds (to fix resizing issues)
@@ -45,28 +39,10 @@ pub fn render() !void {
         zgl.viewport(0, 0, w.size.x, w.size.y);
         // calc camera matrices
         w.camera.calculateMatrices(w);
-        //draw the sky
-        {
-            const sky_mesh: *msh.Mesh = msh.meshes.peek(skymesh);
-            const sky_material: *mat.Material = mat.materials.peek(sky_mesh.material_index);
-            const sky_shader: *shd.Shader = shd.shaders.peek(sky_material.shader_index);
 
-            zgl.useProgram(sky_shader.program);
-            if (checkGLErrorState("Use Program")) std.debug.print("Program Name:{d}\n", .{sky_shader.program});
+        // render UI screen
+        try rui.proc();
 
-            //bind mesh
-            zgl.bindVertexArray(sky_mesh.vao);
-            if (checkGLErrorState("Bind Vertex Array")) std.debug.print("VAO Address:{d}\n", .{sky_mesh.vao});
-
-            const sky_color = lvl.active_level.sky_color.toArray();
-
-            zgl.uniform4fv(sky_shader.bse_name, 1, &sky_color);
-            if (checkGLErrorState("Sky Sun Uniform Assignment")) std.debug.print("Uniform Address:{d} for program {d}\n", .{ sky_shader.bse_name, sky_shader.program });
-
-            //draw
-            zgl.drawElements(0, 1, zgl.UNSIGNED_INT, null);
-            _ = checkGLErrorState("Draw Elements");
-        }
         // for each cube
         render_block: for (lvl.active_level.cubes.items) |cube| {
             //skip if inactive
@@ -124,20 +100,38 @@ pub fn render() !void {
             _ = checkGLErrorState("Draw Elements");
         }
 
+        // draw the sky
+        // TODO check if GLCLEARCOLOR or separate buffer is a better option
+        // TODO determine if depth/horizon haze should be handled
+        {
+            const sky_mesh: *msh.Mesh = msh.meshes.peek(skymesh);
+            const sky_material: *mat.Material = mat.materials.peek(sky_mesh.material_index);
+            const sky_shader: *shd.Shader = shd.shaders.peek(sky_material.shader_index);
+
+            zgl.useProgram(sky_shader.program);
+            if (checkGLErrorState("Use Program")) std.debug.print("Program Name:{d}\n", .{sky_shader.program});
+
+            //bind mesh
+            zgl.bindVertexArray(sky_mesh.vao);
+            if (checkGLErrorState("Bind Vertex Array")) std.debug.print("VAO Address:{d}\n", .{sky_mesh.vao});
+
+            const sky_color = lvl.active_level.sky_color.toArray();
+
+            zgl.uniform4fv(sky_shader.bse_name, 1, &sky_color);
+            if (checkGLErrorState("Sky Sun Uniform Assignment")) std.debug.print("Uniform Address:{d} for program {d}\n", .{ sky_shader.bse_name, sky_shader.program });
+
+            //draw
+            zgl.drawElements(0, 1, zgl.UNSIGNED_INT, null);
+            _ = checkGLErrorState("Draw Elements");
+        }
+
+        // overlay UI buffer
+        try rui.proc();
+        _ = checkGLErrorState("Proc UI");
+
+        // swap buffer into window
         zdl.gl.swapWindow(w.sdl_window);
     }
-}
-
-pub fn updateUIBuffer() !void {
-    //for each ui box in scene, check if updated per box?
-    //regardless, bind render buffer and render to it?
-    zgl.framebufferRenderbuffer(zgl.FRAMEBUFFER, zgl.COLOR_ATTACHMENT0, zgl.RENDERBUFFER, ui_render_buffer);
-}
-
-pub fn drawUIBuffer() !void {
-    zdl.gl.bindRenderbuffer(zdl.gl.READ_FRAMEBUFFER, ui_render_buffer);
-    zdl.gl.bindFramebuffer(zdl.gl.DRAW_FRAMEBUFFER, 0);
-    zdl.gl.blitFramebuffer(0, 0, 1024, 1024, 0, 0, 1024, 1024, zdl.gl.COLOR_BUFFER_BIT, zdl.gl.NEAREST);
 }
 
 /// Get Proc Address
@@ -149,9 +143,9 @@ pub fn getProcAddress(name: [:0]const u8) ?*const anyopaque {
 /// Check if GL has an error, and log if so with the provided descriptor string
 /// Also, return a bool, because why not?
 pub fn checkGLErrorState(gl_op_description: []const u8) bool {
-    var gl_err = zgl.getError();
+    const gl_err = zgl.getError();
     if (gl_err > 0) {
-        std.log.err("GL drawing on operation: {s}, error: {s}", .{ gl_op_description, getGLErrorString(gl_err) });
+        std.log.err("GL operation: {s}, error: {s} 0x{x}", .{ gl_op_description, getGLErrorString(gl_err), gl_err });
         return true;
     }
     return false;
@@ -161,7 +155,7 @@ pub fn checkGLErrorState(gl_op_description: []const u8) bool {
 pub fn getGLErrorString(gl_error_enum_value: u32) []const u8 {
     switch (gl_error_enum_value) {
         0x0500 => {
-            return "Inavlid Enum";
+            return "Invalid Enum";
         },
         0x0501 => {
             return "Invalid Value";

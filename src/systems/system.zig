@@ -5,21 +5,23 @@ const zgl = @import("zopengl");
 const zmt = @import("zmath");
 const csm = @import("../systems/csmath.zig");
 const phy = @import("../systems/physics.zig");
-const tpe = @import("../types/types.zig");
-const wnd = @import("../types/window.zig");
-const rnd = @import("../render/renderer.zig");
 const evt = @import("../systems/event.zig");
-const lvl = @import("../types/level.zig");
+const gls = @import("../systems/glsystem.zig");
+const cnt = @import("../systems/controller.zig");
+const chr = @import("../systems/chrono.zig");
+const rnd = @import("../render/renderer.zig");
 const msh = @import("../assets/mesh.zig");
 const mat = @import("../assets/material.zig");
 const shd = @import("../assets/shader.zig");
-const gls = @import("../systems/glsystem.zig");
+const tex = @import("../assets/texture.zig");
+const tpe = @import("../types/types.zig");
+const wnd = @import("../types/window.zig");
+const lvl = @import("../types/level.zig");
 const cbe = @import("../objects/cube.zig");
-const cnt = @import("../systems/controller.zig");
-const chr = @import("../systems/chrono.zig");
 
-// Allocator
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+/// Allocator
+/// TODO specialized allocators to handle specific data types
 pub const allocator = gpa.allocator();
 
 /// Engine States, each flag is a bit array for state.
@@ -82,6 +84,10 @@ pub fn init() !void {
         .{ .x = 800, .y = 600 },
     );
 
+    // initialization of texture stack requires
+    //     data from prior GL initialization, thus it go here
+    try tex.init(allocator, .{});
+
     // init sky
     try rnd.init();
 
@@ -107,6 +113,7 @@ pub fn deinit() void {
     msh.meshes.deinit();
     mat.materials.deinit();
     shd.shaders.deinit();
+    tex.deinit();
 
     if (getState(EngineState.physics))
         phy.deinit();

@@ -17,16 +17,19 @@ pub const Mesh = struct {
     drawstyle_enum: u32 = 0,
 };
 
-pub var meshes = asc.AssetCollection(Mesh, addMesh, remMesh){};
+pub var meshes = asc.AssetCollection(Mesh, createMesh, remMesh){};
 
-fn addMesh(mesh_id: u32) Mesh {
+fn createMesh(mesh_id: u32) Mesh {
     var mesh: Mesh = .{
         .id = mesh_id,
     };
-    var material_index = mat.materials.fetch(mesh_id) catch |err| {
+    const material_index = mat.materials.fetch(mesh_id) catch |err| {
         std.log.err("Material fetching errored: {}", .{err});
         return mesh;
     };
+
+    //For now, all renderered objects are glpoints
+    //For complex meshes, and instancing, this will need branching
     mesh.material_index = material_index;
     const shader = shd.shaders.peek(mat.materials.peek(mesh.material_index).shader_index);
     zgl.useProgram(shader.program);

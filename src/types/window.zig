@@ -37,7 +37,7 @@ pub fn deinit() void {
 pub fn createNewWindow(name: [:0]const u8, position: tps.Point2, dimensions: tps.Point2) !void {
 
     // create (z)sdl window
-    var temp_window = try zdl.Window.create(
+    const temp_window = try zdl.Window.create(
         name,
         position.x,
         position.y,
@@ -50,7 +50,7 @@ pub fn createNewWindow(name: [:0]const u8, position: tps.Point2, dimensions: tps
     std.log.info("SDL window \"{s}\" created successfully", .{name});
 
     // create a gl context for the window
-    var temp_context = try zdl.gl.createContext(temp_window);
+    const temp_context = try zdl.gl.createContext(temp_window);
     // again, if fails, destroy it
     errdefer (zdl.gl.deleteContext(temp_context));
     std.log.info("GL context for window \"{s}\" created successfully", .{name});
@@ -62,7 +62,7 @@ pub fn createNewWindow(name: [:0]const u8, position: tps.Point2, dimensions: tps
     // required after context creation as GL needs an active context to initialize
     // it's actually worse than this, but don't question it for your own sanity's sake
     if (!sys.getState(sys.EngineState.render)) {
-        try gls.initalizeGL();
+        try gls.initalizeGL(.{});
         sys.setStateOn(sys.EngineState.render);
     }
 

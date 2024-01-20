@@ -27,7 +27,7 @@ pub fn convQuatToEul(q: @Vector(4, f32)) @Vector(3, f32) {
     angles[0] = std.math.atan2(f32, sinr_cosp, cosr_cosp);
 
     // pitch (y-axis rotation)
-    var sinp: f32 = 2 * (w * y - z * x);
+    const sinp: f32 = 2 * (w * y - z * x);
     if (@abs(sinp) >= 1) {
         angles[1] = std.math.copysign(@as(f32, std.math.pi / 2.0), sinp); // use 90 degrees if out of range
     } else angles[1] = std.math.asin(sinp);

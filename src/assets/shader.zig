@@ -33,10 +33,10 @@ pub const Shader = struct {
 
 };
 
-pub var shaders = asc.AssetCollection(Shader, addShader, remShader){};
+pub var shaders = asc.AssetCollection(Shader, createShader, destroyShader){};
 
 fn loadShaderModule(shader_source: [:0]const u8, program: u32, module_type: u32) u32 {
-    var module: u32 = zgl.createShader(module_type);
+    const module: u32 = zgl.createShader(module_type);
     zgl.shaderSource(module, 1, @as([*c]const [*c]const u8, &@as([*c]const u8, shader_source)), null);
     zgl.compileShader(module);
     zgl.attachShader(program, module);
@@ -75,16 +75,28 @@ pub fn checkShaderError(
     return is_error;
 }
 
-fn addShader(shader_id: u32) Shader {
+fn createShader(shader_id: u32) Shader {
     var shader = Shader{ .id = shader_id };
     const program = zgl.createProgram();
     // early returns should results in an undesirable but graceful
 
     // assignments should be the id-specific onboards
     // identified as seperate files or filepacks
-    const v_shader: [:0]const u8 = if (shader_id == 0) cube_v_shader else sky_v_shader;
-    const g_shader: [:0]const u8 = if (shader_id == 0) cube_g_shader else sky_g_shader;
-    const f_shader: [:0]const u8 = if (shader_id == 0) cube_f_shader else sky_f_shader;
+    const v_shader: [:0]const u8 = switch (shader_id) {
+        1 => sky_v_shader,
+        255 => box_v_shader,
+        else => cube_v_shader,
+    };
+    const g_shader: [:0]const u8 = switch (shader_id) {
+        1 => sky_g_shader,
+        255 => box_g_shader,
+        else => cube_g_shader,
+    };
+    const f_shader: [:0]const u8 = switch (shader_id) {
+        1 => sky_f_shader,
+        255 => box_f_shader,
+        else => cube_f_shader,
+    };
 
     // Load and compile shader modules from a provided source. Sources will need to be generally retrieved.
     const vert_module = loadShaderModule(v_shader, program, zgl.VERTEX_SHADER);
@@ -136,7 +148,7 @@ fn addShader(shader_id: u32) Shader {
     return shader;
 }
 
-fn remShader(shader: *Shader) void {
+fn destroyShader(shader: *Shader) void {
     //delet program?
     _ = shader;
 }
@@ -244,7 +256,7 @@ const cube_g_shader =
     \\void main()
     \\{ 
     \\  //draw inside
-    \\  BuildFace(3, 0, 2, 1, vec3(0.0, 1.0f, 0.0f),   stride.zx);
+    \\  BuildFace(3, 0, 2, 1, vec3(0.0f, 1.0f, 0.0f),  stride.zx);
     \\	BuildFace(2, 5, 7, 0, vec3(1.0f, 0.0f, 0.0f),  stride.zy); 
     \\	BuildFace(6, 1, 3, 4, vec3(-1.0f, 0.0f, 0.0f), stride.yz);
     \\	BuildFace(6, 2, 7, 3, vec3(0.0f, 0.0f, -1.0f), stride.yx); 
@@ -252,7 +264,7 @@ const cube_g_shader =
     \\	BuildFace(7, 4, 6, 5, vec3(0.0f, -1.0f, 0.0f), stride.xz);
     \\  
     \\  //draw outside
-    \\	BuildFace(0, 3, 2, 1, vec3(0.0, 1.0f, 0.0f),   stride.zx);
+    \\	BuildFace(0, 3, 2, 1, vec3(0.0f, 1.0f, 0.0f),  stride.zx);
     \\	BuildFace(5, 2, 7, 0, vec3(1.0f, 0.0f, 0.0f),  stride.zy); 
     \\	BuildFace(1, 6, 3, 4, vec3(-1.0f, 0.0f, 0.0f), stride.zy);
     \\	BuildFace(2, 6, 7, 3, vec3(0.0f, 0.0f, -1.0f), stride.yx); 
@@ -326,6 +338,7 @@ const sky_v_shader =
 
 const box_f_shader =
     \\//BOX FRAGMENT SHADER
+    \\#version 330 core
     \\
     \\uniform sampler2DArray tex0Index;
     \\uniform int tex0Offset;
@@ -337,7 +350,7 @@ const box_f_shader =
     \\out vec4 frag_color;
     \\
     \\void main(){
-    \\  
+    \\  frag_color = colorA + texture(tex0Index, vec3(frag_uv, tex0Offset));
     \\}
 ;
 
@@ -345,9 +358,15 @@ const box_g_shader =
     \\//BOX GEOMETRY SHADER
     \\#version 330 core
     \\
+    \\layout(points) in; 
+    \\layout(triangle_strip, max_vertices = 6) out; 
+    \\
     \\//xywh
     \\//vvvv
     \\//wxyz
+    \\
+    \\//xyzw?wxyz?
+    \\
     \\uniform vec4 bounds; //box extents in screen-space coords
     \\uniform float base; //layer
     \\uniform vec4 index; //box uvs
@@ -356,21 +375,25 @@ const box_g_shader =
     \\
     \\void main() 
     \\{
-    \\  gl_Position = vec4(bounds.wx, base, 1.0f);
-    \\  frag_uv = index.wx;
+    \\  gl_Position = vec4(bounds.xy, base, 1.0f);
+    \\  frag_uv = index.xy;
     \\  EmitVertex(); 
-    \\  gl_Position = vec4(bounds.w + bounds.y, bounds.x, base, 1.0f);
+    \\  gl_Position = vec4(bounds.x + bounds.z, bounds.x, base, 1.0f);
+    \\  frag_uv = index.zy;
     \\  EmitVertex(); 
-    \\  gl_Position = vec4(bounds.w + bounds.y, bounds.x + bounds.z, base, 1.0f);
+    \\  gl_Position = vec4(bounds.x + bounds.z, bounds.y + bounds.w, base, 1.0f);
+    \\  frag_uv = index.zw;
     \\  EmitVertex(); 
     \\	EndPrimitive();
     \\
-    \\  gl_Position = vec4(bounds.wx, base, 1.0f);
-    \\  frag_uv = index.wx;
+    \\  gl_Position = vec4(bounds.xy, base, 1.0f);
+    \\  frag_uv = index.xy;
     \\  EmitVertex(); 
-    \\  gl_Position = vec4(bounds.w + bounds.y, bounds.x + bounds.z, base, 1.0f);
+    \\  gl_Position = vec4(bounds.x + bounds.z, bounds.y + bounds.w, base, 1.0f);
+    \\  frag_uv = index.zw;
     \\  EmitVertex(); 
-    \\  gl_Position = vec4(bounds.w + bounds.y, bounds.x + bounds.z, base, 1.0f);
+    \\  gl_Position = vec4(bounds.x, bounds.y + bounds.w, base, 1.0f);
+    \\  frag_uv = index.xw;
     \\  EmitVertex(); 
     \\	EndPrimitive();
     \\}

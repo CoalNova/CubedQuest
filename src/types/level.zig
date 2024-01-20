@@ -83,13 +83,13 @@ pub fn loadLevel(filepath: []const u8) !Level {
     }
 
     // for versioning updated processes
-    var proc_ver = data[4];
+    const proc_ver = data[4];
     const processors = [_]u8{1};
     for (processors) |proc| {
         if (proc_ver == proc) {
             //TODO use a function call to seperate process
             //TODO actually implement how this is gonna work
-            var level: Level = .{};
+            const level: Level = .{};
             return level;
         }
     }
@@ -215,7 +215,7 @@ pub fn loadDebugLevel() !void {
             .pos_z = 128,
         },
     };
-    var level = Level{
+    const level = Level{
         .name = &name,
         .sky_color = [_]u8{ 80, 95, 160, 255 },
         .sun_color = [_]u8{ 0, 255, 0, 255 },

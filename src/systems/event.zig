@@ -45,7 +45,7 @@ pub fn processEvents() !void {
         switch (event.type) {
             sdl.EventType.quit => sys.setStateOff(sys.EngineState.alive),
             sdl.EventType.keydown => {
-                var input = .{
+                const input = .{
                     .input_state = InputState.down,
                     .input_type = InputType.keyboard,
                     .input_id = @intFromEnum(event.key.keysym.scancode),
@@ -53,7 +53,7 @@ pub fn processEvents() !void {
                 updateInput(input);
             },
             sdl.EventType.keyup => {
-                var input = .{
+                const input = .{
                     .input_state = InputState.left,
                     .input_type = InputType.keyboard,
                     .input_id = @intFromEnum(event.key.keysym.scancode),

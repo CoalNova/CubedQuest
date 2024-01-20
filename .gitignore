@@ -1,6 +1,5 @@
-libs
-zig*
-*.log
-*.dds
-assets
-.vscode
+.vscode/
+libs/
+zig-out/
+zig-cache/
+_assets/
