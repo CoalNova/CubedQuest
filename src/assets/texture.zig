@@ -5,6 +5,7 @@ const gls = @import("../systems/glsystem.zig");
 const asc = @import("../assets/assetcollection.zig");
 const tpe = @import("../types/types.zig");
 const fio = @import("../systems/fileio.zig");
+const rnd = @import("../render/renderer.zig");
 
 /// Texture metadata to align with relevant GPU data
 pub const Texture = struct {
@@ -63,10 +64,26 @@ var stack: Stack = .{};
 pub fn init(allocator: std.mem.Allocator, stack_options: StackOptions) !void {
     stack.allocator = allocator;
     stack.columns = try stack.allocator.alloc(Column, @intCast(gls.max_tex_binding_points));
-    for (stack.columns) |*column| {
+    for (stack.columns, 0..) |*column, i| {
         column.* = .{
             .textures = try stack.allocator.alloc(Texture, stack_options.initial_size),
         };
+        zgl.activeTexture(zgl.TEXTURE0 + @as(c_uint, @intCast(i)));
+        zgl.genTextures(1, &column.name);
+        zgl.bindTexture(zgl.TEXTURE_2D_ARRAY, column.name);
+        zgl.texImage3D(
+            zgl.TEXTURE_2D_ARRAY,
+            0,
+            zgl.RGB5_A1, 
+            256, 
+            256, 
+            @as(c_int, @intCast(stack_options.initial_size)), 
+            0, 
+            zgl.RGBA, 
+            zgl.UNSIGNED_SHORT_5_5_5_1, 
+            null,
+            );
+        
     }
 }
 
@@ -115,8 +132,8 @@ pub fn peek(texture_index: usize) *Texture {
 
 inline fn getTexFileName(texture_id: u32) []const u8 {
     return switch (texture_id) {
-        255 => "./assets/spritesheet.bmp",
-        else => "./assets/test.bmp",
+        255 => "./_assets/spritesheet.bmp",
+        else => "./_assets/test.bmp",
     };
 }
 
@@ -141,10 +158,10 @@ pub fn bitmapToTexture(bmp: fio.Bitmap, gl_fmt: gls.GLFmtSet, allocator: std.mem
             //A8R8G8B8 to GL_RGB5_A1
             zgl.RGB5_A1 => {
                 const tx: u16 =
-                    (@as(u16, @intCast(bmp.pixel_data[i + 1] / 32)) << (11)) +
-                    (@as(u16, @intCast(bmp.pixel_data[i + 2] / 32)) << (6)) +
-                    (@as(u16, @intCast(bmp.pixel_data[i + 3] / 32)) << (1)) +
-                    (@as(u16, @intCast(bmp.pixel_data[i + 3] / 128)));
+                    ((@as(u16, @intCast(bmp.pixel_data[i + 1] / 32)) & 31) << (11)) +
+                    ((@as(u16, @intCast(bmp.pixel_data[i + 2] / 32)) & 31) << (6)) +
+                    ((@as(u16, @intCast(bmp.pixel_data[i + 3] / 32)) & 31) << (1)) +
+                    (@as(u16, @intCast(bmp.pixel_data[i] / 128)));
                 texels[p * tx_size] = @as(u8, @intCast(tx >> 8));
                 texels[p * tx_size + 1] = @as(u8, @intCast(tx & 255));
             },
@@ -194,7 +211,7 @@ fn createTexture(texture_id: u32) !usize {
         else => zgl.RGBA,
     };
     tex.gl_type = switch (texture_id) {
-        255 => zgl.UNSIGNED_SHORT,
+        255 => zgl.UNSIGNED_SHORT_5_5_5_1,
         else => zgl.UNSIGNED_SHORT,
     };
 
@@ -239,18 +256,23 @@ fn createTexture(texture_id: u32) !usize {
 
     // then jam it in
     stack.columns[texture_index & 255].textures[texture_index >> 8] = tex;
-    zgl.texImage3D(
+        zgl.activeTexture(zgl.TEXTURE0 + @as(c_uint, @intCast(texture_index & 255)));
+
+    zgl.bindTexture( zgl.TEXTURE_2D_ARRAY, stack.columns[texture_index & 255].name);
+    zgl.texSubImage3D(
         zgl.TEXTURE_2D_ARRAY,
         0,
-        tex.format,
+        0,
+        0,
+        0,
         tex.size.x,
         tex.size.y,
         tex.offset,
-        0,
         tex.format_set,
         tex.gl_type,
         @ptrCast(&texels),
     );
+        _ = rnd.checkGLErrorState("Tex Subimage2D");
 
     // then return labelled position
     return texture_index;

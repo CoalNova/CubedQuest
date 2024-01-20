@@ -145,7 +145,7 @@ pub fn getProcAddress(name: [:0]const u8) ?*const anyopaque {
 pub fn checkGLErrorState(gl_op_description: []const u8) bool {
     const gl_err = zgl.getError();
     if (gl_err > 0) {
-        std.log.err("GL operation: {s}, error: {s} 0x{x}", .{ gl_op_description, getGLErrorString(gl_err), gl_err });
+        std.log.err("GL operation: {s}, error: {s} (0x{x})", .{ gl_op_description, getGLErrorString(gl_err), gl_err });
         return true;
     }
     return false;
