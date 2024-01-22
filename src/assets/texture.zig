@@ -74,22 +74,22 @@ pub fn init(allocator: std.mem.Allocator, stack_options: StackOptions) !void {
         zgl.texImage3D(
             zgl.TEXTURE_2D_ARRAY,
             0,
-            zgl.RGB5_A1, 
-            256, 
-            256, 
-            @as(c_int, @intCast(stack_options.initial_size)), 
-            0, 
-            zgl.RGBA, 
-            zgl.UNSIGNED_SHORT_5_5_5_1, 
+            zgl.RGBA8,
+            256,
+            256,
+            @as(c_int, @intCast(stack_options.initial_size)),
+            0,
+            zgl.RGBA,
+            zgl.UNSIGNED_INT,
             null,
-            );
-        
+        );
     }
 }
 
 pub fn deinit() void {
     for (stack.columns) |*column| {
         column.count = 0;
+        zgl.deleteTextures(1, &column.name);
         stack.allocator.free(column.textures);
     }
     stack.allocator.free(stack.columns);
@@ -158,10 +158,18 @@ pub fn bitmapToTexture(bmp: fio.Bitmap, gl_fmt: gls.GLFmtSet, allocator: std.mem
             //A8R8G8B8 to GL_RGB5_A1
             zgl.RGB5_A1 => {
                 const tx: u16 =
-                    ((@as(u16, @intCast(bmp.pixel_data[i + 1] / 32)) & 31) << (11)) +
-                    ((@as(u16, @intCast(bmp.pixel_data[i + 2] / 32)) & 31) << (6)) +
-                    ((@as(u16, @intCast(bmp.pixel_data[i + 3] / 32)) & 31) << (1)) +
+                    ((@as(u16, @intCast(bmp.pixel_data[i + 1] >> 3))) << (11)) +
+                    ((@as(u16, @intCast(bmp.pixel_data[i + 2] >> 3))) << (6)) +
+                    ((@as(u16, @intCast(bmp.pixel_data[i + 3] >> 3))) << (1)) +
                     (@as(u16, @intCast(bmp.pixel_data[i] / 128)));
+                if (bmp.pixel_data[i + 1] == 255)
+                    std.debug.print("[{},{},{},{}] = {}\n", .{
+                        bmp.pixel_data[i + 1],
+                        bmp.pixel_data[i + 2],
+                        bmp.pixel_data[i + 3],
+                        bmp.pixel_data[i],
+                        tx,
+                    });
                 texels[p * tx_size] = @as(u8, @intCast(tx >> 8));
                 texels[p * tx_size + 1] = @as(u8, @intCast(tx & 255));
             },
@@ -203,7 +211,7 @@ fn createTexture(texture_id: u32) !usize {
     defer sys.allocator.free(bitmap.pixel_data);
 
     tex.format = switch (texture_id) {
-        255 => zgl.RGB5_A1,
+        //255 => zgl.RGB5_A1,
         else => zgl.RGBA8,
     };
     tex.format_set = switch (texture_id) {
@@ -211,7 +219,7 @@ fn createTexture(texture_id: u32) !usize {
         else => zgl.RGBA,
     };
     tex.gl_type = switch (texture_id) {
-        255 => zgl.UNSIGNED_SHORT_5_5_5_1,
+        //255 => zgl.UNSIGNED_SHORT_5_5_5_1,
         else => zgl.UNSIGNED_SHORT,
     };
 
@@ -256,23 +264,27 @@ fn createTexture(texture_id: u32) !usize {
 
     // then jam it in
     stack.columns[texture_index & 255].textures[texture_index >> 8] = tex;
-        zgl.activeTexture(zgl.TEXTURE0 + @as(c_uint, @intCast(texture_index & 255)));
+    zgl.activeTexture(zgl.TEXTURE0 + @as(c_uint, @intCast(texture_index & 255)));
 
-    zgl.bindTexture( zgl.TEXTURE_2D_ARRAY, stack.columns[texture_index & 255].name);
+    zgl.bindTexture(zgl.TEXTURE_2D_ARRAY, stack.columns[texture_index & 255].name);
     zgl.texSubImage3D(
-        zgl.TEXTURE_2D_ARRAY,
-        0,
-        0,
-        0,
-        0,
-        tex.size.x,
-        tex.size.y,
-        tex.offset,
-        tex.format_set,
-        tex.gl_type,
-        @ptrCast(&texels),
+        zgl.TEXTURE_2D_ARRAY, //target  Specifies the target to which the texture is bound
+        0, //level  Specifies the level-of-detail number. Level 0 is the base image level.
+        0, //xoffset  Specifies a texel offset in the x axis within the texture array.
+        0, //yoffset  Specifies a texel offset in the y axis within the texture array.
+        tex.offset, //zoffset  Specifies a texel offset in the z axis within the texture array.
+        tex.size.x, //width Specifies the width of the texture subimage.
+        tex.size.y, //height Specifies the height of the texture subimage.
+        tex.offset, //depth Specifies the depth of the texture subimage.
+        tex.format_set, //format Specifies the format of the pixel data.
+        tex.gl_type, //type Specifies the data type of the pixel data.
+        @ptrCast(texels), //pixels Specifies a pointer to the image data in memory.
     );
-        _ = rnd.checkGLErrorState("Tex Subimage2D");
+    std.debug.print("Got Here!\n", .{});
+
+    _ = rnd.checkGLErrorState("Tex Subimage2D");
+
+    stack.columns[texture_index & 255].count += 1;
 
     // then return labelled position
     return texture_index;
