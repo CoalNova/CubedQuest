@@ -21,7 +21,7 @@ pub const ScreenBox = struct {
     pub fn drawBox(self: ScreenBox) void {
         const mesh: *msh.Mesh = msh.meshes.peek(self.mesh_id);
         const material: *mat.Material = mat.materials.peek(mesh.material_index);
-        const texture: *tex.Texture = tex.peek(material.texture_index);
+        //const texture: *tex.Texture = tex.peek(material.texture_index);
         const shader: *shd.Shader = shd.shaders.peek(material.shader_index);
 
         zgl.useProgram(shader.program);
@@ -36,8 +36,8 @@ pub const ScreenBox = struct {
         zgl.uniform4fv(shader.bnd_name, 1, @ptrCast(&self.bounds));
         _ = rnd.checkGLErrorState("Bounds Uniform");
 
-        zgl.uniform1i(shader.t0i_name, @as(c_int, @intCast(texture.index)));
-        zgl.uniform1i(shader.t0o_name, @as(c_int, @intCast(texture.offset)));
+        //zgl.uniform1i(shader.t0i_name, @as(c_int, @intCast(texture.index)));
+        //zgl.uniform1i(shader.t0o_name, @as(c_int, @intCast(texture.offset)));
 
         zgl.uniform4fv(shader.cra_name, 1, @ptrCast(&self.color));
 

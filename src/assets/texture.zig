@@ -23,6 +23,8 @@ pub const Texture = struct {
     format_set: gls.GLFmtSet = 0,
     /// GL type for each texel
     gl_type: gls.GLType = 0,
+    /// GL texture object name
+    name: gls.GLTexName = 0,
 };
 
 /// Stack sub-collection to represent GPU texture memory layout
@@ -42,8 +44,7 @@ const Column = struct {
 /// The texture stack object
 const Stack = struct {
     /// Columns for storing texture metadata
-    columns: []Column = undefined,
-
+    textures: []Texture = undefined,
     /// Persistant allocator
     allocator: std.mem.Allocator = undefined,
 };
@@ -62,37 +63,19 @@ var stack: Stack = .{};
 /// allocator: Persistant Allocator Type
 ///
 pub fn init(allocator: std.mem.Allocator, stack_options: StackOptions) !void {
+    _ = stack_options;
     stack.allocator = allocator;
-    stack.columns = try stack.allocator.alloc(Column, @intCast(gls.max_tex_binding_points));
-    for (stack.columns, 0..) |*column, i| {
-        column.* = .{
-            .textures = try stack.allocator.alloc(Texture, stack_options.initial_size),
-        };
-        zgl.activeTexture(zgl.TEXTURE0 + @as(c_uint, @intCast(i)));
-        zgl.genTextures(1, &column.name);
-        zgl.bindTexture(zgl.TEXTURE_2D_ARRAY, column.name);
-        zgl.texImage3D(
-            zgl.TEXTURE_2D_ARRAY,
-            0,
-            zgl.RGBA8,
-            256,
-            256,
-            @as(c_int, @intCast(stack_options.initial_size)),
-            0,
-            zgl.RGBA,
-            zgl.UNSIGNED_INT,
-            null,
-        );
+    stack.textures = try stack.allocator.alloc(Texture, @intCast(gls.max_tex_binding_points));
+    for (stack.textures, 0..) |*texture, i| {
+        texture.* = Texture{ .index = @intCast(i) };
     }
 }
 
 pub fn deinit() void {
-    for (stack.columns) |*column| {
-        column.count = 0;
-        zgl.deleteTextures(1, &column.name);
-        stack.allocator.free(column.textures);
+    for (stack.textures) |*texture| {
+        zgl.deleteTextures(1, &texture.name);
     }
-    stack.allocator.free(stack.columns);
+    stack.allocator.free(stack.textures);
 }
 
 /// Generates a single usize for texture indexing
@@ -104,14 +87,11 @@ inline fn stackIndex(column_index: usize, texture_index: usize) usize {
 /// Will generate and place texture if none exists
 pub fn fetch(texture_id: u32) !usize {
     // first check if Texture is already loaded
-    for (stack.columns, 0..) |*column, i| {
-        for (0..column.count) |j| {
-            const texture = &column.textures[j];
+    for (stack.textures, 0..) |texture, i| {
+        if (texture.subscribers > 0)
             if (texture.id == texture_id) {
-                texture.subscribers += 1;
-                return stackIndex(i, j);
-            }
-        }
+                return i;
+            };
     }
 
     return try createTexture(texture_id);
@@ -119,11 +99,17 @@ pub fn fetch(texture_id: u32) !usize {
 
 /// Releases use of texture
 pub fn release(texture_id: u32) void {
-    for (stack.columns) |column|
-        for (column.textures) |texture|
-            if (texture.id == texture_id) {
+    for (stack.textures) |texture|
+        if (texture.id == texture_id) {
+            if (texture.subscribers > 0) {
                 texture.subscribers -= 1;
-            };
+            } else {
+                std.log.warn(
+                    "Texture {} released more than subscribed",
+                    .{texture_id},
+                );
+            }
+        };
 }
 
 pub fn peek(texture_index: usize) *Texture {
@@ -220,39 +206,14 @@ fn createTexture(texture_id: u32) !usize {
     };
     tex.gl_type = switch (texture_id) {
         //255 => zgl.UNSIGNED_SHORT_5_5_5_1,
-        else => zgl.UNSIGNED_SHORT,
+        else => zgl.UNSIGNED_INT,
     };
 
     const texels = try bitmapToTexture(bitmap, tex.format, sys.allocator);
     defer sys.allocator.free(texels);
 
     // then find appropriate position
-    var texture_index: usize = 0;
-    emplace_block: {
-        // firstly, check if any openings exist
-        for (stack.columns, 0..) |*column, i| {
-            // make sure to match size and format
-            if (tpe.equals(column.size, tex.size) and column.format == tex.format)
-                if (column.count < column.textures.len) {
-                    // if so, grab index and break
-                    texture_index = stackIndex(i, column.count);
-                    break :emplace_block;
-                };
-        }
-        // else resize and emplce
-        for (stack.columns, 0..) |*column, i| {
-            if (tpe.equals(column.size, tex.size) and column.format == tex.format) {
-                const new_size: usize = @intCast(column.size.x * column.size.y * 2);
-                var new_column = try stack.allocator.alloc(Texture, new_size);
-                _ = &new_column;
-                @memcpy(new_column, column.textures);
-                stack.allocator.free(column.textures);
-                column.textures = new_column;
-                texture_index = stackIndex(i, column.count);
-                break :emplace_block;
-            }
-        }
-    }
+    const texture_index = try getPositionIndex(tex);
 
     tex.subscribers = 1;
     tex.size = tpe.Point2{
@@ -262,34 +223,45 @@ fn createTexture(texture_id: u32) !usize {
     tex.index = @intCast(texture_index & 255);
     tex.offset = @intCast(texture_index >> 8);
 
-    // then jam it in
-    stack.columns[texture_index & 255].textures[texture_index >> 8] = tex;
     zgl.activeTexture(zgl.TEXTURE0 + @as(c_uint, @intCast(texture_index & 255)));
 
-    zgl.bindTexture(zgl.TEXTURE_2D_ARRAY, stack.columns[texture_index & 255].name);
-    zgl.texSubImage3D(
-        zgl.TEXTURE_2D_ARRAY, //target  Specifies the target to which the texture is bound
-        0, //level  Specifies the level-of-detail number. Level 0 is the base image level.
-        0, //xoffset  Specifies a texel offset in the x axis within the texture array.
-        0, //yoffset  Specifies a texel offset in the y axis within the texture array.
-        tex.offset, //zoffset  Specifies a texel offset in the z axis within the texture array.
-        tex.size.x, //width Specifies the width of the texture subimage.
-        tex.size.y, //height Specifies the height of the texture subimage.
-        tex.offset, //depth Specifies the depth of the texture subimage.
-        tex.format_set, //format Specifies the format of the pixel data.
-        tex.gl_type, //type Specifies the data type of the pixel data.
-        @ptrCast(texels), //pixels Specifies a pointer to the image data in memory.
+    zgl.bindTexture(zgl.TEXTURE_2D, stack.columns[texture_index & 255].name);
+
+    zgl.texImage2D(
+        zgl.TEXTURE_2D,
+        0,
+        zgl.RGBA8,
+        256,
+        256,
+        0,
+        zgl.RGBA,
+        zgl.UNSIGNED_INT,
+        texels,
     );
+
     std.debug.print("Got Here!\n", .{});
 
     _ = rnd.checkGLErrorState("Tex Subimage2D");
 
     stack.columns[texture_index & 255].count += 1;
 
+    // then jam it in
+    stack.textures[texture_index] = tex;
     // then return labelled position
     return texture_index;
 }
 
 fn destroyTexture(texture: *Texture) void {
     _ = texture;
+}
+
+fn getPositionIndex(tex: Texture) !usize {
+    _ = tex;
+    // firstly, check if any openings exist
+    for (stack.textures, 0..) |*texture, i| {
+        if (texture.subscribers < 1)
+            // if so, grab index and break
+            return i;
+    }
+    return 0;
 }

@@ -21,10 +21,10 @@ fn createMaterial(material_id: u32) Material {
         std.log.err("Material {} failed to get shader: {!}", .{ material_id, err });
         return material;
     };
-    material.texture_index = tex.fetch(material_id) catch |err| {
-        std.log.err("Material {} failed to get texture: {!}", .{ material_id, err });
-        return material;
-    };
+    //material.texture_index = tex.fetch(material_id) catch |err| {
+    //    std.log.err("Material {} failed to get texture: {!}", .{ material_id, err });
+    //    return material;
+    //};
     return material;
 }
 

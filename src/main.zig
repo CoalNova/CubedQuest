@@ -1,5 +1,6 @@
 const std = @import("std");
 const zdl = @import("zsdl");
+const zgl = @import("zopengl");
 const zmt = @import("zmath");
 const sys = @import("systems/system.zig");
 const lvl = @import("types/level.zig");
@@ -16,6 +17,27 @@ pub fn main() !void {
 
     //DEBUG set level
     try lvl.loadDebugLevel();
+
+    zgl.activeTexture(zgl.TEXTURE0);
+    var tex_name: gls.GLTexName = 0;
+    zgl.genTextures(1, &tex_name);
+    zgl.bindTexture(zgl.TEXTURE_2D, tex_name);
+
+    const texels = try sys.allocator.alloc(c_uint, 256 * 256);
+    defer sys.allocator.free(texels);
+    for (texels) |*t| t.* = 0xFFFFFFFF;
+
+    zgl.texImage2D(
+        zgl.TEXTURE_2D,
+        0,
+        zgl.RGBA8,
+        256,
+        256,
+        0,
+        zgl.RGBA,
+        zgl.UNSIGNED_BYTE,
+        null, //@ptrCast(&texels),
+    );
 
     std.debug.print("Press enter to start level!\n", .{});
 
