@@ -340,7 +340,7 @@ const box_f_shader =
     \\//BOX FRAGMENT SHADER
     \\#version 330 core
     \\
-    \\uniform sampler2DArray tex0Index;
+    \\uniform sampler2D tex0Index;
     \\uniform int tex0Offset;
     \\uniform vec4 colorA;
     \\uniform vec4 colorB;
@@ -350,7 +350,7 @@ const box_f_shader =
     \\out vec4 frag_color;
     \\
     \\void main(){
-    \\  frag_color = colorA + texture(tex0Index, vec3(frag_uv, tex0Offset));
+    \\  frag_color = colorA + texture(tex0Index, frag_uv);
     \\}
 ;
 
@@ -378,7 +378,7 @@ const box_g_shader =
     \\  gl_Position = vec4(bounds.xy, base, 1.0f);
     \\  frag_uv = index.xy;
     \\  EmitVertex(); 
-    \\  gl_Position = vec4(bounds.x + bounds.z, bounds.x, base, 1.0f);
+    \\  gl_Position = vec4(bounds.x + bounds.z, bounds.y, base, 1.0f);
     \\  frag_uv = index.zy;
     \\  EmitVertex(); 
     \\  gl_Position = vec4(bounds.x + bounds.z, bounds.y + bounds.w, base, 1.0f);

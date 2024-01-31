@@ -6,6 +6,7 @@ const sys = @import("systems/system.zig");
 const lvl = @import("types/level.zig");
 const evt = @import("systems/event.zig");
 const gls = @import("systems/glsystem.zig");
+const rui = @import("render/ui.zig");
 
 /// Main insertion point, due to the lite natue of the function it is an adequate location for testing.
 // For production/final this function should only contain the initializer, deinitializer, and process call.
@@ -17,27 +18,6 @@ pub fn main() !void {
 
     //DEBUG set level
     try lvl.loadDebugLevel();
-
-    zgl.activeTexture(zgl.TEXTURE0);
-    var tex_name: gls.GLTexName = 0;
-    zgl.genTextures(1, &tex_name);
-    zgl.bindTexture(zgl.TEXTURE_2D, tex_name);
-
-    const texels = try sys.allocator.alloc(c_uint, 256 * 256);
-    defer sys.allocator.free(texels);
-    for (texels) |*t| t.* = 0xFFFFFFFF;
-
-    zgl.texImage2D(
-        zgl.TEXTURE_2D,
-        0,
-        zgl.RGBA8,
-        256,
-        256,
-        0,
-        zgl.RGBA,
-        zgl.UNSIGNED_BYTE,
-        null, //@ptrCast(&texels),
-    );
 
     std.debug.print("Press enter to start level!\n", .{});
 
@@ -54,7 +34,10 @@ pub fn main() !void {
                 evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.s) }) or
                 evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.a) }) or
                 evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.a) }))
+            {
                 lvl.active_level.lvl_state = lvl.LevelState.playing;
+                try rui.update(.play_playing);
+            }
         }
 
         //DEBUG wireframe mode

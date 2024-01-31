@@ -8,6 +8,8 @@ const cam = @import("../objects/camera.zig");
 const pos = @import("../types/position.zig");
 const wnd = @import("../types/window.zig");
 const pst = @import("../types/position.zig");
+const scr = @import("../render/screen.zig");
+const rui = @import("../render/ui.zig");
 
 /// Active Level Struct
 /// TODO/MEBE figure out how this is gonna work
@@ -115,7 +117,10 @@ pub fn generateLevel(level: Level) !void {
             active_level.max_score += 1;
     }
     active_level.sun_direction.fromUIntArray(level.sun_direction, 255.0);
+
     active_level.lvl_state = LevelState.generated;
+
+    try rui.update(.play_start);
 }
 
 pub fn convertActive() Level {}

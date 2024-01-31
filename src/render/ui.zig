@@ -48,4 +48,6 @@ pub fn proc() !void {
 }
 
 /// Modify the buffer(s)
-pub fn update() !void {}
+pub fn update(screen_type: scr.ScreenType) !void {
+    screen = try scr.buildScreen(screen_type);
+}

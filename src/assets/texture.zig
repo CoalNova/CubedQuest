@@ -113,7 +113,7 @@ pub fn release(texture_id: u32) void {
 }
 
 pub fn peek(texture_index: usize) *Texture {
-    return &stack.columns[texture_index & 255].textures[texture_index >> 8];
+    return &stack.textures[texture_index];
 }
 
 inline fn getTexFileName(texture_id: u32) []const u8 {
@@ -148,14 +148,6 @@ pub fn bitmapToTexture(bmp: fio.Bitmap, gl_fmt: gls.GLFmtSet, allocator: std.mem
                     ((@as(u16, @intCast(bmp.pixel_data[i + 2] >> 3))) << (6)) +
                     ((@as(u16, @intCast(bmp.pixel_data[i + 3] >> 3))) << (1)) +
                     (@as(u16, @intCast(bmp.pixel_data[i] / 128)));
-                if (bmp.pixel_data[i + 1] == 255)
-                    std.debug.print("[{},{},{},{}] = {}\n", .{
-                        bmp.pixel_data[i + 1],
-                        bmp.pixel_data[i + 2],
-                        bmp.pixel_data[i + 3],
-                        bmp.pixel_data[i],
-                        tx,
-                    });
                 texels[p * tx_size] = @as(u8, @intCast(tx >> 8));
                 texels[p * tx_size + 1] = @as(u8, @intCast(tx & 255));
             },
@@ -173,10 +165,14 @@ pub fn bitmapToTexture(bmp: fio.Bitmap, gl_fmt: gls.GLFmtSet, allocator: std.mem
             },
             // fall through to RGBA8
             else => {
-                texels[p * tx_size] = bmp.pixel_data[i + 1];
-                texels[p * tx_size + 1] = bmp.pixel_data[i + 2];
-                texels[p * tx_size + 2] = bmp.pixel_data[i + 3];
-                texels[p * tx_size + 3] = bmp.pixel_data[i];
+                //red
+                texels[p * tx_size + 0] = bmp.pixel_data[i + 2]; //2
+                //green
+                texels[p * tx_size + 1] = bmp.pixel_data[i + 1]; //1
+                //blue
+                texels[p * tx_size + 2] = bmp.pixel_data[i + 0]; //0
+                //alpha
+                texels[p * tx_size + 3] = bmp.pixel_data[i + 3]; //3
             },
         }
     }
@@ -189,8 +185,11 @@ pub fn bitmapToTexture(bmp: fio.Bitmap, gl_fmt: gls.GLFmtSet, allocator: std.mem
 fn createTexture(texture_id: u32) !usize {
     var tex = Texture{ .id = texture_id };
 
+    const filename = getTexFileName(texture_id);
+    std.debug.print("{s}\n", .{filename});
+
     // generate texture object, with bounds as part of the data
-    const file_buffer = try fio.readFileAlloc(getTexFileName(texture_id), sys.allocator, 1 << 20);
+    const file_buffer = try fio.readFileAlloc(filename, sys.allocator, 1 << 20);
     defer sys.allocator.free(file_buffer);
 
     const bitmap = try fio.bitmapFromFile(file_buffer, sys.allocator);
@@ -212,6 +211,9 @@ fn createTexture(texture_id: u32) !usize {
     const texels = try bitmapToTexture(bitmap, tex.format, sys.allocator);
     defer sys.allocator.free(texels);
 
+    // std.debug.print("SizeOf Texels: {}\n", .{texels.len});
+    // for (texels) |*t| t.* = 0xFF;
+
     // then find appropriate position
     const texture_index = try getPositionIndex(tex);
 
@@ -223,9 +225,17 @@ fn createTexture(texture_id: u32) !usize {
     tex.index = @intCast(texture_index & 255);
     tex.offset = @intCast(texture_index >> 8);
 
+    zgl.genTextures(1, &tex.name);
+
     zgl.activeTexture(zgl.TEXTURE0 + @as(c_uint, @intCast(texture_index & 255)));
 
-    zgl.bindTexture(zgl.TEXTURE_2D, stack.columns[texture_index & 255].name);
+    zgl.bindTexture(zgl.TEXTURE_2D, tex.name);
+
+    zgl.texParameteri(zgl.TEXTURE_2D, zgl.TEXTURE_MIN_FILTER, zgl.NEAREST);
+    zgl.texParameteri(zgl.TEXTURE_2D, zgl.TEXTURE_MAG_FILTER, zgl.NEAREST);
+    zgl.texParameteri(zgl.TEXTURE_2D, zgl.TEXTURE_WRAP_S, zgl.MIRRORED_REPEAT);
+    //zgl.texParameteri(zgl.TEXTURE_2D, zgl.TEXTURE_MIN_FILTER, zgl.LINEAR_MIPMAP_LINEAR);
+    //zgl.texParameteri(zgl.TEXTURE_2D, zgl.TEXTURE_MAG_FILTER, zgl.LINEAR);
 
     zgl.texImage2D(
         zgl.TEXTURE_2D,
@@ -235,15 +245,13 @@ fn createTexture(texture_id: u32) !usize {
         256,
         0,
         zgl.RGBA,
-        zgl.UNSIGNED_INT,
-        texels,
+        zgl.UNSIGNED_BYTE,
+        @ptrCast(texels),
     );
 
-    std.debug.print("Got Here!\n", .{});
+    zgl.generateMipmap(zgl.TEXTURE_2D);
 
     _ = rnd.checkGLErrorState("Tex Subimage2D");
-
-    stack.columns[texture_index & 255].count += 1;
 
     // then jam it in
     stack.textures[texture_index] = tex;

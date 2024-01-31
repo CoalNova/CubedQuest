@@ -21,7 +21,7 @@ pub const ScreenBox = struct {
     pub fn drawBox(self: ScreenBox) void {
         const mesh: *msh.Mesh = msh.meshes.peek(self.mesh_id);
         const material: *mat.Material = mat.materials.peek(mesh.material_index);
-        //const texture: *tex.Texture = tex.peek(material.texture_index);
+        const texture: *tex.Texture = tex.peek(material.texture_index);
         const shader: *shd.Shader = shd.shaders.peek(material.shader_index);
 
         zgl.useProgram(shader.program);
@@ -30,14 +30,19 @@ pub const ScreenBox = struct {
         zgl.bindVertexArray(mesh.vao);
         _ = rnd.checkGLErrorState("Bind VAO");
 
+        //zgl.activeTexture(zgl.TEXTURE0 + @as(c_uint, @intCast(texture.index & 255)));
+        zgl.bindTexture(zgl.TEXTURE_2D, texture.name);
+        zgl.uniform4f(shader.ind_name, 0, 0, 0, 0);
+        _ = rnd.checkGLErrorState("Char UV Uniform");
+
         zgl.uniform1f(shader.bse_name, self.layer);
         _ = rnd.checkGLErrorState("Base Uniform");
 
         zgl.uniform4fv(shader.bnd_name, 1, @ptrCast(&self.bounds));
         _ = rnd.checkGLErrorState("Bounds Uniform");
 
-        //zgl.uniform1i(shader.t0i_name, @as(c_int, @intCast(texture.index)));
-        //zgl.uniform1i(shader.t0o_name, @as(c_int, @intCast(texture.offset)));
+        zgl.uniform1i(shader.t0i_name, @as(c_int, @intCast(texture.index)));
+        zgl.uniform1i(shader.t0o_name, @as(c_int, @intCast(texture.offset)));
 
         zgl.uniform4fv(shader.cra_name, 1, @ptrCast(&self.color));
 
@@ -47,26 +52,37 @@ pub const ScreenBox = struct {
         zgl.uniform1f(shader.bse_name, self.layer - 0.1);
         _ = rnd.checkGLErrorState("Char Base Uniform");
 
-        const l_c = tpe.Point4{};
+        const l_c = tpe.Point4{ .w = 1.0, .x = 1.0, .y = 1.0, .z = 1.0 };
         zgl.uniform4fv(shader.cra_name, 1, @ptrCast(&l_c));
         _ = rnd.checkGLErrorState("Char Base Uniform");
 
         //TODO set based on window bounds
-        const l = tpe.Float2{ .x = 0.1, .y = 0.1 };
+        const l = tpe.Float2{ .x = 0.05, .y = 0.05 };
 
         // need axiliary positioning for wrapping of text
         for (self.contents, 0..) |c, i| {
+
+            // check if return character and skip down if so
+            if (c == '\n') {
+                continue;
+            }
+
             // get uv off character position
             // coords are 0.0-1.0 relational
             // charmap is 16*16 px
             const d: f32 = 1.0 / 16.0;
-            const u: f32 = @as(f32, @floatFromInt(c % 16)) * d;
-            const v: f32 = 1.0 - @as(f32, @floatFromInt(c / 16)) * d;
+            const u: f32 = @as(f32, @floatFromInt(@mod(c, 16))) * d;
+            const v: f32 = 1.0 - @as(f32, @floatFromInt(@divTrunc(c, 16) + 1)) * d;
+
             zgl.uniform4f(shader.ind_name, u, v, u + d, v + d);
             _ = rnd.checkGLErrorState("Char UV Uniform");
 
-            const x = self.bounds.w + l.x * @as(f32, @floatFromInt(i + 1));
-            const y = self.bounds.x + l.y;
+            const abs_width_units = @as(u32, @intFromFloat(self.bounds.y / l.x));
+
+            const x = self.bounds.w + l.x *
+                @as(f32, @floatFromInt(@mod(i, abs_width_units)));
+            const y = (-self.bounds.x - l.y *
+                @as(f32, @floatFromInt(@divTrunc(i, abs_width_units) + 1)));
 
             const bounds = tpe.Float4{
                 .w = x,
