@@ -131,6 +131,22 @@ pub fn saveLevel(level: Level) !void {
     _ = level;
 }
 
+pub fn setActiveState(state: LevelState) void {
+    active_level.lvl_state = state;
+    switch (state) {
+        LevelState.generated => rui.update(scr.ScreenType.play_start) catch unreachable,
+        LevelState.playing => rui.update(scr.ScreenType.play_playing) catch unreachable,
+        LevelState.paused => rui.update(scr.ScreenType.play_pause) catch unreachable,
+        LevelState.succeeded => rui.update(scr.ScreenType.play_succeed) catch unreachable,
+        LevelState.failed => rui.update(scr.ScreenType.play_failure) catch unreachable,
+        LevelState.degenerateded => rui.update(scr.ScreenType.start_landing) catch unreachable,
+    }
+}
+
+pub fn getActiveState() LevelState {
+    return active_level.lvl_state;
+}
+
 /// Unloads current level and deletes
 pub fn unloadActiveLevel() void {
     for (active_level.cubes.items) |*cube|

@@ -33,15 +33,16 @@ pub fn render() !void {
         try zdl.gl.makeCurrent(w.sdl_window, w.gl_context);
 
         // get and set viewport from window bounds (to fix resizing issues)
-        zdl.Window.getSize(w.sdl_window, &w.size.x, &w.size.y) catch unreachable;
+        w.proc();
         // clear
         zgl.clear(zgl.COLOR_BUFFER_BIT | zgl.DEPTH_BUFFER_BIT);
-        zgl.viewport(0, 0, w.size.x, w.size.y);
+        zgl.viewport(0, 0, w.bounds.y, w.bounds.z);
         // calc camera matrices
         w.camera.calculateMatrices(w);
 
         // render UI screen
-        try rui.proc();
+        try rui.proc(w.*);
+        _ = checkGLErrorState("Proc UI");
 
         // for each cube
         render_block: for (lvl.active_level.cubes.items) |cube| {
@@ -124,10 +125,6 @@ pub fn render() !void {
             zgl.drawElements(0, 1, zgl.UNSIGNED_INT, null);
             _ = checkGLErrorState("Draw Elements");
         }
-
-        // overlay UI buffer
-        try rui.proc();
-        _ = checkGLErrorState("Proc UI");
 
         // swap buffer into window
         zdl.gl.swapWindow(w.sdl_window);

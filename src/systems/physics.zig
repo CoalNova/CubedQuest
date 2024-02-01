@@ -279,19 +279,16 @@ const ContactListener = extern struct {
 
             switch (b.cube_type) {
                 cbe.CubeType.enemy => {
-                    std.debug.print("Game Over\n", .{});
-                    lvl.active_level.lvl_state = lvl.LevelState.failed;
+                    lvl.setActiveState(.failed);
                 },
                 cbe.CubeType.coin => {
                     if (b.cube_state == 3) {
                         b.cube_state = 0;
                         lvl.active_level.cur_score += 1;
-                        std.debug.print("Kaching! Level Score: {}\n", .{lvl.active_level.cur_score});
                     }
                 },
                 cbe.CubeType.endgate => {
-                    std.debug.print("You're Winner!\n", .{});
-                    lvl.active_level.lvl_state = lvl.LevelState.succeeded;
+                    lvl.setActiveState(.succeeded);
                 },
 
                 else => {},

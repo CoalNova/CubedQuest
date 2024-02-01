@@ -6,14 +6,21 @@ const sys = @import("../systems/system.zig");
 const cam = @import("../objects/camera.zig");
 const tpe = @import("../types/types.zig");
 const gls = @import("../systems/glsystem.zig");
+const mse = @import("../inputs/mouse.zig");
 
 /// The Window Container Struct
 /// Contains context, sdl_window, camera, and size.
 pub const Window = struct {
     sdl_window: *zdl.Window,
     gl_context: zdl.gl.Context,
-    size: tpe.Point2 = undefined,
+    bounds: tpe.Point4 = undefined,
     camera: cam.Camera = undefined,
+    mouse: mse.Mouse = .{},
+    pub fn proc(self: *Window) void {
+        zdl.Window.getPosition(self.sdl_window, &self.bounds.w, &self.bounds.x) catch unreachable;
+        zdl.Window.getSize(self.sdl_window, &self.bounds.y, &self.bounds.z) catch unreachable;
+        self.mouse.procMouse(self.*);
+    }
 };
 
 /// Basic array list of all windows (currently one)
@@ -70,7 +77,7 @@ pub fn createNewWindow(name: [:0]const u8, position: tps.Point2, dimensions: tps
     try windows.append(Window{
         .sdl_window = temp_window,
         .gl_context = temp_context,
-        .size = dimensions,
+        .bounds = .{ .y = dimensions.x, .z = dimensions.y },
         .camera = .{},
     });
 }

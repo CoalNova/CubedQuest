@@ -19,8 +19,6 @@ pub fn main() !void {
     //DEBUG set level
     try lvl.loadDebugLevel();
 
-    std.debug.print("Press enter to start level!\n", .{});
-
     // Process Engine Parts
     while (try sys.proc()) {
 
@@ -34,10 +32,7 @@ pub fn main() !void {
                 evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.s) }) or
                 evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.a) }) or
                 evt.getInputDown(.{ .input_id = @intFromEnum(zdl.Scancode.a) }))
-            {
-                lvl.active_level.lvl_state = lvl.LevelState.playing;
-                try rui.update(.play_playing);
-            }
+                lvl.setActiveState(.playing);
         }
 
         //DEBUG wireframe mode

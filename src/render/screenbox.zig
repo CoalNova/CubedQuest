@@ -9,16 +9,18 @@ const tpe = @import("../types/types.zig");
 const asc = @import("../assets/assetcollection.zig");
 const rnd = @import("../render/renderer.zig");
 const tex = @import("../assets/texture.zig");
+const wnd = @import("../types/window.zig");
 
 /// The box object drawn to the screen
 pub const ScreenBox = struct {
-    id: u32 = 0,
+    id: u32 = 255,
     mesh_id: usize = 0,
     contents: []const u8 = undefined,
-    layer: f32 = 0,
+    layer: f32 = 0.5,
     bounds: tpe.Float4 = .{},
     color: tpe.Float4 = .{},
-    pub fn drawBox(self: ScreenBox) void {
+    button: ?*const fn () void = null,
+    pub fn drawBox(self: ScreenBox, window: wnd.Window) void {
         const mesh: *msh.Mesh = msh.meshes.peek(self.mesh_id);
         const material: *mat.Material = mat.materials.peek(mesh.material_index);
         const texture: *tex.Texture = tex.peek(material.texture_index);
@@ -44,7 +46,19 @@ pub const ScreenBox = struct {
         zgl.uniform1i(shader.t0i_name, @as(c_int, @intCast(texture.index)));
         zgl.uniform1i(shader.t0o_name, @as(c_int, @intCast(texture.offset)));
 
-        zgl.uniform4fv(shader.cra_name, 1, @ptrCast(&self.color));
+        const m_rel = window.mouse.rel_position;
+        var color = self.color;
+        if (self.button != null) {
+            if (m_rel.x > self.bounds.w and m_rel.x < self.bounds.w + self.bounds.y and
+                m_rel.y > self.bounds.x and m_rel.y < self.bounds.x + self.bounds.z)
+            {
+                color = .{ .w = 0.8, .x = 0.8, .y = 0.8, .z = 1.0 };
+            }
+            if (window.mouse.button_state[0] == .down)
+                self.button.?();
+        }
+
+        zgl.uniform4fv(shader.cra_name, 1, @ptrCast(&color));
 
         zgl.drawElements(0, 1, zgl.UNSIGNED_INT, null);
         _ = rnd.checkGLErrorState("Draw Elements");
@@ -81,7 +95,7 @@ pub const ScreenBox = struct {
 
             const x = self.bounds.w + l.x *
                 @as(f32, @floatFromInt(@mod(i, abs_width_units)));
-            const y = (-self.bounds.x - l.y *
+            const y = (self.bounds.x + self.bounds.z - l.y *
                 @as(f32, @floatFromInt(@divTrunc(i, abs_width_units) + 1)));
 
             const bounds = tpe.Float4{

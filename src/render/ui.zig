@@ -1,9 +1,12 @@
 const std = @import("std");
 const zdl = @import("zsdl");
 const zgl = @import("zopengl");
+const lvl = @import("../types/level.zig");
+const sys = @import("../systems/system.zig");
 const box = @import("../render/screenbox.zig");
 const rnd = @import("../render/renderer.zig");
 const scr = @import("../render/screen.zig");
+const wnd = @import("../types/window.zig");
 
 var ui_buffer: u32 = 0;
 var ui_render_buffer: u32 = 0;
@@ -30,7 +33,7 @@ pub fn deinit() void {
 }
 
 /// Draw the buffer(s)
-pub fn proc() !void {
+pub fn proc(window: wnd.Window) !void {
     zgl.bindRenderbuffer(zgl.RENDERBUFFER, ui_render_buffer);
     if (rnd.checkGLErrorState("Bind Render Buffer to READ_FRAMEBUFFER error"))
         std.debug.print("ui_render_buffer name {} \n", .{ui_render_buffer});
@@ -42,8 +45,19 @@ pub fn proc() !void {
     _ = rnd.checkGLErrorState("Blit Render Buffer to Draw Buffer error");
     //for now, just draw box
 
-    for (screen.boxes) |b| {
-        b.drawBox();
+    if (screen.screen_type == .play_playing) {
+        const score: []const u8 = try std.fmt.allocPrint(
+            sys.allocator,
+            "Score: {d}",
+            .{lvl.active_level.cur_score},
+        );
+        defer sys.allocator.free(score);
+        screen.boxes[1].contents = score;
+        for (screen.boxes) |b|
+            b.drawBox(window);
+    } else {
+        for (screen.boxes) |b|
+            b.drawBox(window);
     }
 }
 

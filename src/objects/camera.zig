@@ -49,7 +49,7 @@ pub const Camera = struct {
         self.projection_matrix =
             mth.perspectiveFovRhGl(
             self.field_of_view,
-            @as(f32, @floatFromInt(window.size.x)) / @as(f32, @floatFromInt(window.size.y)),
+            @as(f32, @floatFromInt(window.bounds.y)) / @as(f32, @floatFromInt(window.bounds.z)),
             self.near_plane,
             self.far_plane,
         );
