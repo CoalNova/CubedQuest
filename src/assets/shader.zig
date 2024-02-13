@@ -24,6 +24,8 @@ pub const Shader = struct {
     bse_name: i32 = -1, // "base"
     ran_name: i32 = -1, // "range"
     sun_name: i32 = -1, // "sun"
+    scl_name: i32 = -1, // "sunColor"
+    srt_name: i32 = -1, // "sunRotation"
     aml_name: i32 = -1, // "ambientLuminance"
     amc_name: i32 = -1, // "ambientChroma"
     cra_name: i32 = -1, // "colorA"
@@ -135,6 +137,8 @@ fn createShader(shader_id: u32) Shader {
     shader.bse_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("base\x00")));
     shader.ran_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("range\x00")));
     shader.sun_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("sun\x00")));
+    shader.scl_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("sunColor\x00")));
+    shader.srt_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("sunRotation\x00")));
     shader.aml_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("ambientLuminance\x00")));
     shader.amc_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("ambientChroma\x00")));
     shader.cra_name = zgl.getUniformLocation(shader.program, @as([*c]const u8, @ptrCast("colorA\x00")));
@@ -166,18 +170,22 @@ const cube_f_shader =
     \\in float fragV;
     \\flat in float fragScaleY;
     \\
+    \\uniform float ambientLuminance;
+    \\uniform vec4 ambientChroma;
     \\uniform vec4 colorA;
     \\uniform vec4 colorB;
-    \\uniform vec3 rotation;
+    \\uniform vec3 sunRotation;
     \\uniform vec4 sun;
     \\
     \\float edge = 0.2f;
     \\
     \\void main()
     \\{
-    \\  outColor = 
-    \\      ((abs(fragU) > (fragScaleX - edge) || abs(fragV) > (fragScaleY - edge)) ? colorB : colorA) + 
-    \\          max(0.0, dot(rotation, fragNormal)) * sun * 0.1f; 
+    \\  vec4 baseColor = ((abs(fragU) > (fragScaleX - edge) || abs(fragV) > (fragScaleY - edge)) ? colorB : colorA); 
+    \\  outColor =
+    \\      vec4((ambientChroma.rgb + baseColor.rgb) * ambientLuminance 
+    \\          + max(0.0, dot(-sunRotation, fragNormal)) * sun.rgb, baseColor.a);
+    \\        
     \\}
 ;
 
@@ -195,6 +203,7 @@ const cube_g_shader =
     \\flat out float fragScaleY;
     \\
     \\uniform mat4 matrix; 
+    \\uniform mat4 rotation;
     \\uniform vec3 stride; //matches scale on cube
     \\
     \\vec3 verts[8] = vec3[]( 
@@ -206,22 +215,24 @@ const cube_g_shader =
     \\
     \\void BuildFace(int fir, int sec, int thr, int frt, vec3 normal, vec2 scale)
     \\{ 
+    \\  vec3 adjNormal = (rotation * vec4(normal, 1.0f)).xyz;
+    \\  
     \\	gl_Position = matrix * vec4(verts[fir], 1.0f);
-    \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy ;
+    \\  fragNormal = adjNormal;
     \\  fragU = -scale.x;
     \\  fragV = scale.y;
     \\  fragScaleX = scale.x;	
     \\  fragScaleY = scale.y;	
     \\  EmitVertex(); 
     \\	gl_Position = matrix * vec4(verts[sec], 1.0f);
-    \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy;
+    \\  fragNormal = adjNormal;
     \\  fragU = scale.x;
     \\  fragV = -scale.y;
     \\  fragScaleX = scale.x;	
     \\  fragScaleY = scale.y;
     \\	EmitVertex(); 
     \\	gl_Position = matrix * vec4(verts[thr], 1.0f);
-    \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy;
+    \\  fragNormal = adjNormal;
     \\  fragU = scale.x;
     \\  fragV = scale.y;
     \\  fragScaleX = scale.x;	
@@ -230,21 +241,21 @@ const cube_g_shader =
     \\	EndPrimitive();
     \\	 
     \\	gl_Position = matrix * vec4(verts[fir], 1.0f);
-    \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy;
+    \\  fragNormal = adjNormal;
     \\  fragU = scale.x;
     \\  fragV = -scale.y;
     \\  fragScaleX = scale.x;	
     \\  fragScaleY = scale.y;
     \\	EmitVertex(); 
     \\	gl_Position = matrix * vec4(verts[frt], 1.0f);
-    \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy;
+    \\  fragNormal = adjNormal;
     \\  fragU = scale.x;
     \\  fragV = scale.y;
     \\  fragScaleX = scale.x;	
     \\  fragScaleY = scale.y;  
     \\  EmitVertex(); 
     \\	gl_Position = matrix * vec4(verts[sec], 1.0f);
-    \\  fragNormal = (matrix * vec4(normal, 1.0f)).wxy;
+    \\  fragNormal = adjNormal;
     \\  fragU = -scale.x;
     \\  fragV = scale.y;
     \\  fragScaleX = scale.x;	

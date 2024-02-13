@@ -69,6 +69,7 @@ pub const OGD = packed struct {
     sca_x: u3 = 0, //2 ^ (x) (creates 1, 2, 4, 8, 16, 32, 64, 128)
     sca_y: u3 = 0,
     sca_z: u3 = 0,
+    __padding_1: u14 = undefined,
 };
 
 /// Determines control type, paint type, and positioning

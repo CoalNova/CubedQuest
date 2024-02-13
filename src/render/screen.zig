@@ -93,14 +93,30 @@ var play_playing_boxes = [_]box.ScreenBox{
         .contents = "Score:  0",
     },
 };
-var play_succeed_boxes = [_]box.ScreenBox{.{
-    .bounds = .{ .w = -0.25, .x = -0.1, .y = 0.5, .z = 0.2 },
-    .color = .{ .w = 0.2, .x = 0.2, .y = 0.2, .z = 1.0 },
-    .id = 255,
-    .layer = 0.5,
-    .mesh_id = 0,
-    .contents = "You're Winner!",
-}};
+var play_succeed_boxes = [_]box.ScreenBox{
+    .{
+        .bounds = .{ .w = -0.25, .x = -0.1, .y = 0.5, .z = 0.2 },
+        .color = .{ .w = 0.2, .x = 0.2, .y = 0.2, .z = 1.0 },
+        .id = 255,
+        .layer = 0.5,
+        .mesh_id = 0,
+        .contents = "You're Winner!",
+    },
+    .{
+        .bounds = .{ .w = -0.25, .x = -0.1, .y = 0.15, .z = 0.05 },
+        .color = .{ .w = 0.5, .x = 0.2, .y = 0.2, .z = 1.0 },
+        .layer = 0.4,
+        .contents = "Quit",
+        .button = &quit,
+    },
+    .{
+        .bounds = .{ .w = -0.1, .x = -0.1, .y = 0.35, .z = 0.05 },
+        .color = .{ .w = 0.2, .x = 0.5, .y = 0.2, .z = 1.0 },
+        .layer = 0.4,
+        .contents = "Restart",
+        .button = &restartlvl,
+    },
+};
 var play_failure_boxes = [_]box.ScreenBox{
     .{
         .bounds = .{ .w = -0.3, .x = -0.1, .y = 0.6, .z = 0.2 },
@@ -108,10 +124,18 @@ var play_failure_boxes = [_]box.ScreenBox{
         .contents = "You Failed!",
     },
     .{
-        .bounds = .{ .w = -0.2, .x = -0.15, .y = 0.4, .z = 0.05 },
+        .bounds = .{ .w = -0.3, .x = -0.1, .y = 0.25, .z = 0.05 },
         .color = .{ .w = 0.5, .x = 0.2, .y = 0.2, .z = 1.0 },
+        .layer = 0.4,
         .contents = "Quit",
-        .button = quit,
+        .button = &quit,
+    },
+    .{
+        .bounds = .{ .w = -0.05, .x = -0.1, .y = 0.35, .z = 0.05 },
+        .color = .{ .w = 0.2, .x = 0.5, .y = 0.2, .z = 1.0 },
+        .layer = 0.4,
+        .contents = "Restart",
+        .button = &restartlvl,
     },
 };
 var settings_controls_boxes = [_]box.ScreenBox{};
@@ -124,4 +148,7 @@ pub fn startlvl() void {
 
 pub fn quit() void {
     sys.setStateOff(sys.EngineState.alive);
+}
+pub fn restartlvl() void {
+    lvl.active_level.generateFromLevel(lvl.active_level.level) catch unreachable;
 }

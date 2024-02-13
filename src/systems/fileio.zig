@@ -137,3 +137,10 @@ pub fn bitmapFromFile(raw_buffer: []u8, allocator: std.mem.Allocator) !Bitmap {
     @memcpy(bmp.pixel_data, raw_buffer[data_start .. data_start + bmp.size]);
     return bmp;
 }
+
+pub inline fn saveBuffer(filename: []const u8, buffer: []const u8) !void {
+    const cwd = std.fs.cwd();
+    var file = try cwd.createFile(filename, .{});
+    defer file.close();
+    _ = try file.write(buffer);
+}

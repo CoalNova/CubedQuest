@@ -63,17 +63,22 @@ pub fn render() !void {
             );
 
             const mvp = zmt.mul(model, w.camera.vp_matrix);
+            const rmat = zmt.matFromQuat(cube.euclid.rotation);
 
             zgl.useProgram(shader.program);
-            if (checkGLErrorState("Use Program")) std.debug.print("Program Name:{d}\n", .{shader.program});
+            if (checkGLErrorState("Use Program")) std.log.err("Program Name:{d}\n", .{shader.program});
 
             //bind mesh
             zgl.bindVertexArray(mesh.vao);
-            if (checkGLErrorState("Bind Vertex Array")) std.debug.print("VAO Address:{d}\n", .{mesh.vao});
+            if (checkGLErrorState("Bind Vertex Array")) std.log.err("VAO Address:{d}\n", .{mesh.vao});
 
             //assign matrix
             zgl.uniformMatrix4fv(shader.mtx_name, 1, zgl.FALSE, &mvp[0][0]);
-            if (checkGLErrorState("MVP Matrix Uniform Assignment")) std.debug.print("Uniform Address:{d}\n", .{shader.mtx_name});
+            if (checkGLErrorState("MVP Matrix Uniform Assignment")) std.log.err("Uniform Address:{d}\n", .{shader.mtx_name});
+
+            //assign rotation matrix
+            zgl.uniformMatrix4fv(shader.rot_name, 1, zgl.FALSE, &rmat[0][0]);
+            if (checkGLErrorState("MVP Matrix Uniform Assignment")) std.log.err("Uniform Address:{d}\n", .{shader.rot_name});
 
             var c = tpe.Float4{};
             c.fromSIMD(cbe.aColors[@intFromEnum(cube.cube_paint)]);
@@ -81,20 +86,24 @@ pub fn render() !void {
             c.fromSIMD(cbe.bColors[@intFromEnum(cube.cube_paint)]);
             const b_color = c.toArray();
 
-            const sun_color: [4]f32 = lvl.active_level.sky_color.toArray();
+            const sun_color: [4]f32 = lvl.active_level.sun_color.toArray();
             const sun_direction: [3]f32 = lvl.active_level.sun_direction.toArray();
             const stride = cube.euclid.scale.toArray();
 
             zgl.uniform3fv(shader.str_name, 1, &stride);
-            if (checkGLErrorState("Stride Uniform Assignment")) std.debug.print("Uniform Address:{d}\n", .{shader.str_name});
-            zgl.uniform3fv(shader.rot_name, 1, &sun_direction);
-            if (checkGLErrorState("Sun Rotation Uniform Assignment")) std.debug.print("Uniform Address:{d}\n", .{shader.rot_name});
+            if (checkGLErrorState("Stride Uniform Assignment")) std.log.err("Uniform Address:{d}\n", .{shader.str_name});
+            zgl.uniform3fv(shader.srt_name, 1, &sun_direction);
+            if (checkGLErrorState("Sun Rotation Uniform Assignment")) std.log.err("Uniform Address:{d}\n", .{shader.srt_name});
             zgl.uniform4fv(shader.sun_name, 1, &sun_color);
-            if (checkGLErrorState("Sun Color Uniform Assignment")) std.debug.print("Uniform Address:{d}\n", .{shader.sun_name});
+            if (checkGLErrorState("Sun Color Uniform Assignment")) std.log.err("Uniform Address:{d}\n", .{shader.sun_name});
             zgl.uniform4fv(shader.cra_name, 1, &a_color);
-            if (checkGLErrorState("A (center) Color Uniform Assignment")) std.debug.print("Uniform Address:{d}\n", .{shader.cra_name});
+            if (checkGLErrorState("A (center) Color Uniform Assignment")) std.log.err("Uniform Address:{d}\n", .{shader.cra_name});
             zgl.uniform4fv(shader.crb_name, 1, &b_color);
-            if (checkGLErrorState("B (edge) Color Uniform Assignment")) std.debug.print("Uniform Address:{d}\n", .{shader.crb_name});
+            if (checkGLErrorState("B (edge) Color Uniform Assignment")) std.log.err("Uniform Address:{d}\n", .{shader.crb_name});
+            zgl.uniform1f(shader.aml_name, lvl.active_level.amb_lumin);
+            if (checkGLErrorState("Ambient Luminance Uniform Assignment")) std.log.err("Uniform Address:{d}\n", .{shader.aml_name});
+            zgl.uniform4fv(shader.amc_name, 1, @ptrCast(&lvl.active_level.amb_color));
+            if (checkGLErrorState("Ambient Chroma Uniform Assignment")) std.log.err("Uniform Address:{d}\n", .{shader.amc_name});
 
             //draw
             zgl.drawElements(0, 1, zgl.UNSIGNED_INT, null);

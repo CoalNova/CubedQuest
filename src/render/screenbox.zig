@@ -20,6 +20,7 @@ pub const ScreenBox = struct {
     bounds: tpe.Float4 = .{},
     color: tpe.Float4 = .{},
     button: ?*const fn () void = null,
+    sub_box: ?[]ScreenBox = null,
     pub fn drawBox(self: ScreenBox, window: wnd.Window) void {
         const mesh: *msh.Mesh = msh.meshes.peek(self.mesh_id);
         const material: *mat.Material = mat.materials.peek(mesh.material_index);
@@ -52,10 +53,13 @@ pub const ScreenBox = struct {
             if (m_rel.x > self.bounds.w and m_rel.x < self.bounds.w + self.bounds.y and
                 m_rel.y > self.bounds.x and m_rel.y < self.bounds.x + self.bounds.z)
             {
-                color = .{ .w = 0.8, .x = 0.8, .y = 0.8, .z = 1.0 };
+                if (window.mouse.button_state[0] == .stay)
+                    color = .{ .w = color.w * 1.5, .x = color.x * 1.5, .y = color.y * 1.5, .z = 1.0 }
+                else
+                    color = .{ .w = color.w * 2, .x = color.x * 2, .y = color.y * 2, .z = 1.0 };
+                if (window.mouse.button_state[0] == .left)
+                    self.button.?();
             }
-            if (window.mouse.button_state[0] == .down)
-                self.button.?();
         }
 
         zgl.uniform4fv(shader.cra_name, 1, @ptrCast(&color));
@@ -110,6 +114,10 @@ pub const ScreenBox = struct {
             zgl.drawElements(0, 1, zgl.UNSIGNED_INT, null);
             _ = rnd.checkGLErrorState("Char Draw Elements");
         }
+
+        if (self.sub_box) |sub|
+            for (sub) |box|
+                box.drawBox(window);
     }
 };
 

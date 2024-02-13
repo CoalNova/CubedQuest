@@ -103,7 +103,7 @@ pub fn init() !void {
 /// Deinitialize Engine
 pub fn deinit() void {
     //unload active level, deleting assets
-    lvl.unloadActiveLevel();
+    lvl.active_level.degenLevel();
 
     rnd.deinit();
 
