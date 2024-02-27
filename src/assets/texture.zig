@@ -7,6 +7,9 @@ const tpe = @import("../types/types.zig");
 const fio = @import("../systems/fileio.zig");
 const rnd = @import("../render/renderer.zig");
 
+const _sprite_sheet = @embedFile("../gamedata/spritesheet.bmp");
+const _test_file = @embedFile("../gamedata/test.bmp");
+
 /// Texture metadata to align with relevant GPU data
 pub const Texture = struct {
     id: u32 = 0,
@@ -123,6 +126,13 @@ inline fn getTexFileName(texture_id: u32) []const u8 {
     };
 }
 
+inline fn getInternalFile(texture_id: u32) []const u8 {
+    return switch (texture_id) {
+        255 => _sprite_sheet,
+        else => _test_file,
+    };
+}
+
 /// Converts a supplied bitmap into a supplied Texture
 /// Converts to a supplied GL pixel format
 pub fn bitmapToTexture(bmp: fio.Bitmap, gl_fmt: gls.GLFmtSet, allocator: std.mem.Allocator) ![]u8 {
@@ -185,12 +195,13 @@ pub fn bitmapToTexture(bmp: fio.Bitmap, gl_fmt: gls.GLFmtSet, allocator: std.mem
 fn createTexture(texture_id: u32) !usize {
     var tex = Texture{ .id = texture_id };
 
-    const filename = getTexFileName(texture_id);
-    std.debug.print("{s}\n", .{filename});
+    //const filename = getTexFileName(texture_id);
 
     // generate texture object, with bounds as part of the data
-    const file_buffer = try fio.readFileAlloc(filename, sys.allocator, 1 << 20);
-    defer sys.allocator.free(file_buffer);
+    //const file_buffer = try fio.readFileAlloc(filename, sys.allocator, 1 << 20);
+    //defer sys.allocator.free(file_buffer);
+
+    const file_buffer = getInternalFile(texture_id);
 
     const bitmap = try fio.bitmapFromFile(file_buffer, sys.allocator);
     defer sys.allocator.free(bitmap.pixel_data);

@@ -2,5 +2,5 @@
 libs/
 zig-out/
 zig-cache/
-_assets/
+gamedata/
 *.cq3

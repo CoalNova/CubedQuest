@@ -64,7 +64,7 @@ var play_start_boxes = [_]box.ScreenBox{
     .{
         .bounds = .{ .w = -0.5, .x = -0.5, .y = 1.0, .z = 1.0 },
         .color = .{ .w = 0.2, .x = 0.2, .y = 0.2, .z = 1.0 },
-        .contents = "Use the directional keys or press 'Enter' to begin.",
+        .contents = "Use the 'W', 'A', 'S', and 'D' keys or press 'Enter' to begin. Press 'Esc' to exit.",
     },
     .{
         .bounds = .{ .w = -0.2, .x = -0.4, .y = 0.4, .z = 0.05 },

@@ -96,6 +96,8 @@ pub fn init() !void {
     setStateOn(EngineState.events);
     setStateOn(EngineState.playing);
 
+    lvl.active_level.init(allocator);
+
     // DEBUG
     try zdl.gl.setSwapInterval(1);
 }

@@ -11,6 +11,7 @@ const rui = @import("render/ui.zig");
 const wnd = @import("types/window.zig");
 const fio = @import("systems/fileio.zig");
 const cbe = @import("objects/cube.zig");
+const scr = @import("render/screen.zig");
 
 /// Main insertion point, due to the lite natue of the function it is an adequate location for testing.
 // For production/final this function should only contain the initializer, deinitializer, and process call.
@@ -35,18 +36,10 @@ pub fn main() !void {
         sys.allocator.free(level.ogds);
         sys.allocator.free(level.name);
     }
-
-    std.debug.assert(std.mem.eql(u16, &level.cam_pos, &lvl.debug_level.cam_pos));
-    std.debug.assert(std.mem.eql(f32, &level.cam_rot, &lvl.debug_level.cam_rot));
-    std.debug.assert(level.cam_fov == lvl.debug_level.cam_fov);
-    for (lvl.debug_level.ogds, 0..) |ogd, i| {
-        if (@as(u64, @bitCast(level.ogds[i])) != @as(u64, @bitCast(ogd)))
-            std.debug.print("FAILED!\n{any}\n  {any}\n", .{ level.ogds[i], ogd });
-    }
-
-    //DEBUG set level
-    //try lvl.loadMainMenu();
     try lvl.active_level.generateFromLevel(level);
+
+    //lvl.active_level.lvl_state = lvl.LevelState.playing;
+    //try rui.update(scr.ScreenType.start_landing);
 
     //sys.setStateOff(sys.EngineState.alive);
 

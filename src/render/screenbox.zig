@@ -74,45 +74,73 @@ pub const ScreenBox = struct {
         zgl.uniform4fv(shader.cra_name, 1, @ptrCast(&l_c));
         _ = rnd.checkGLErrorState("Char Base Uniform");
 
-        //TODO set based on window bounds
-        const l = tpe.Float2{ .x = 0.05, .y = 0.05 };
+        // ratio set by window bounds, and a predetermined size for
+        const ratio = @as(f32, @floatFromInt(window.bounds.y)) / @as(f32, @floatFromInt(window.bounds.z));
+        const scale: f32 = 0.05;
+        const shape = tpe.Float2{ .x = scale, .y = ratio * scale };
 
-        // need axiliary positioning for wrapping of text
-        for (self.contents, 0..) |c, i| {
+        // split contents apart based on whitespace characters
+        //TODO catch newline for basic formatting
+        var spliterator = std.mem.splitAny(u8, self.contents, "\n ");
+        var x: usize = 0;
+        var y: usize = 0;
+        const abs_width_units = @as(u32, @intFromFloat(@ceil(self.bounds.y / shape.x)));
 
-            // check if return character and skip down if so
-            if (c == '\n') {
-                continue;
+        while (spliterator.next()) |word| {
+            var w_adj: f32 = 1.0;
+            if (word.len + x > abs_width_units) {
+                if (x > 0) {
+                    x = 0;
+                    y += 1;
+                }
+                // get the adjusted width of oversized words
+                if (word.len > abs_width_units) {
+                    w_adj = self.bounds.y / @as(f32, @floatFromInt(word.len));
+                    w_adj /= scale;
+                }
+                if (self.bounds.z < scale * w_adj) {
+                    w_adj = self.bounds.z / scale;
+                }
             }
 
-            // get uv off character position
-            // coords are 0.0-1.0 relational
-            // charmap is 16*16 px
-            const d: f32 = 1.0 / 16.0;
-            const u: f32 = @as(f32, @floatFromInt(@mod(c, 16))) * d;
-            const v: f32 = 1.0 - @as(f32, @floatFromInt(@divTrunc(c, 16) + 1)) * d;
+            // need axiliary positioning for wrapping of text
+            for (word) |c| {
+                // get uv off character position
+                // coords are 0.0-1.0 relational
+                // charmap is 16*16 px
+                const d: f32 = 1.0 / 16.0;
+                const u: f32 = @as(f32, @floatFromInt(@mod(c, 16))) * d;
+                const v: f32 = 1.0 - @as(f32, @floatFromInt(@divTrunc(c, 16) + 1)) * d;
 
-            zgl.uniform4f(shader.ind_name, u, v, u + d, v + d);
-            _ = rnd.checkGLErrorState("Char UV Uniform");
+                // pass character UVs to shader
+                zgl.uniform4f(shader.ind_name, u, v, u + d, v + d);
+                _ = rnd.checkGLErrorState("Char UV Uniform");
 
-            const abs_width_units = @as(u32, @intFromFloat(self.bounds.y / l.x));
+                // calculate screenspace coords
+                const bounds = tpe.Float4{
+                    // x
+                    .w = self.bounds.w + @as(f32, @floatFromInt(x)) * scale * w_adj,
+                    // y
+                    .x = self.bounds.z + self.bounds.x - @as(f32, @floatFromInt(1 + y)) * scale * ratio,
+                    // width
+                    .y = shape.x * w_adj,
+                    // height
+                    .z = shape.y * w_adj,
+                };
+                zgl.uniform4fv(shader.bnd_name, 1, @ptrCast(&bounds));
+                _ = rnd.checkGLErrorState("Char Bounds Uniform");
 
-            const x = self.bounds.w + l.x *
-                @as(f32, @floatFromInt(@mod(i, abs_width_units)));
-            const y = (self.bounds.x + self.bounds.z - l.y *
-                @as(f32, @floatFromInt(@divTrunc(i, abs_width_units) + 1)));
+                zgl.drawElements(0, 1, zgl.UNSIGNED_INT, null);
+                _ = rnd.checkGLErrorState("Char Draw Elements");
+                x += 1;
+            }
 
-            const bounds = tpe.Float4{
-                .w = x,
-                .x = y,
-                .y = l.x,
-                .z = l.y,
-            };
-            zgl.uniform4fv(shader.bnd_name, 1, @ptrCast(&bounds));
-            _ = rnd.checkGLErrorState("Char Bounds Uniform");
-
-            zgl.drawElements(0, 1, zgl.UNSIGNED_INT, null);
-            _ = rnd.checkGLErrorState("Char Draw Elements");
+            if (x < abs_width_units) {
+                x += 1;
+            } else {
+                x = 0;
+                y += 1;
+            }
         }
 
         if (self.sub_box) |sub|

@@ -117,7 +117,7 @@ pub const Bitmap = struct {
 };
 
 /// Propagates Bitmap Header and data fields from a raw file as a struct
-pub fn bitmapFromFile(raw_buffer: []u8, allocator: std.mem.Allocator) !Bitmap {
+pub fn bitmapFromFile(raw_buffer: []const u8, allocator: std.mem.Allocator) !Bitmap {
     if (!std.mem.eql(u8, raw_buffer[0..2], "BM"))
         return error.InvalidBMPFile;
 
@@ -132,7 +132,6 @@ pub fn bitmapFromFile(raw_buffer: []u8, allocator: std.mem.Allocator) !Bitmap {
     bmp.compression = std.mem.readInt(u32, raw_buffer[30..34], .little);
     bmp.size = std.mem.readInt(u32, raw_buffer[34..38], .little);
 
-    std.debug.print("{any}\n", .{bmp});
     bmp.pixel_data = try allocator.alloc(u8, bmp.size);
     @memcpy(bmp.pixel_data, raw_buffer[data_start .. data_start + bmp.size]);
     return bmp;

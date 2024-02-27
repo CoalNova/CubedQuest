@@ -30,18 +30,20 @@ pub const ActiveLevel = struct {
     max_score: u8 = 0,
     lvl_state: LevelState = LevelState.degenerateded,
     allocator: std.mem.Allocator = undefined,
-    pub fn init(self: *ActiveLevel, allocator: std.mem) void {
+    pub fn init(self: *ActiveLevel, allocator: std.mem.Allocator) void {
         self.allocator = allocator;
     }
     pub fn generateFromLevel(self: *ActiveLevel, level: Level) !void {
         // unload active, just in case
         if (self.lvl_state != LevelState.degenerateded)
             self.degenLevel();
+        self.cur_score = 0;
         self.level = level;
         self.amb_color.fromUIntArray(level.amb_color, 255.0);
         self.sun_color.fromUIntArray(level.sun_color, 255.0);
         self.sky_color.fromUIntArray(level.sky_color, 255.0);
-        self.cubes = std.ArrayList(cbe.Cube).init(sys.allocator);
+        self.cubes = std.ArrayList(cbe.Cube).init(self.allocator);
+        self.links = std.ArrayList(Link).init(self.allocator);
 
         for (level.ogds, 0..) |ogd, i| {
             try self.cubes.append(try cbe.createCube(ogd, @intCast(i)));
@@ -80,6 +82,16 @@ pub const ActiveLevel = struct {
             .rotation = level.cam_rot,
         };
 
+        //self.links.init(self.allocator);
+        for (0..level.link_list.len / 2) |l| {
+            std.debug.print("{}-{}\n", .{ level.link_list[l * 2], level.link_list[l * 2 + 1] });
+            const link = Link{
+                .source = level.link_list[l * 2],
+                .destination = level.link_list[l * 2 + 1],
+            };
+            try self.links.append(link);
+        }
+
         setActiveState(.generated);
     }
     pub fn degenLevel(self: *ActiveLevel) void {
@@ -88,6 +100,7 @@ pub const ActiveLevel = struct {
 
         self.cubes.deinit();
         self.lvl_state = LevelState.degenerateded;
+        self.links.deinit();
     }
 };
 
@@ -328,10 +341,15 @@ pub fn levelFromBuffer(buffer: []const u8, allocator: std.mem.Allocator) !Level 
 
             // Linked List Length - u8
             const list_length = buffer[i];
+            i += 1;
 
             // Linked List - []u8
             level.link_list = try allocator.alloc(u8, list_length);
             @memcpy(level.link_list, buffer[i .. i + list_length]);
+
+            for (level.link_list) |l| {
+                std.debug.print("{}\n", .{l});
+            }
 
             return level;
         }
@@ -368,7 +386,7 @@ pub fn getActiveState() LevelState {
 }
 
 const main_name: []const u8 = "Main Menu";
-const main_ogds = [_]cbe.OGD{
+var main_ogds = [_]cbe.OGD{
     cbe.OGD{
         .cube_type = @intFromEnum(cbe.CubeType.ground),
         .cube_paint = @intFromEnum(cbe.CubePaint.ground),
@@ -388,23 +406,52 @@ const main_ogds = [_]cbe.OGD{
         .rot_y = 2,
         .rot_z = 5,
     },
+    cbe.OGD{
+        .cube_type = @intFromEnum(cbe.CubeType.enemy),
+        .cube_paint = @intFromEnum(cbe.CubePaint.enemy),
+        .pos_x = 120,
+        .pos_y = 120,
+        .pos_z = 133,
+    },
+    cbe.OGD{
+        .cube_type = @intFromEnum(cbe.CubeType.enemy),
+        .cube_paint = @intFromEnum(cbe.CubePaint.enemy),
+        .pos_x = 136,
+        .pos_y = 120,
+        .pos_z = 133,
+    },
+    cbe.OGD{
+        .cube_type = @intFromEnum(cbe.CubeType.enemy),
+        .cube_paint = @intFromEnum(cbe.CubePaint.enemy),
+        .pos_x = 136,
+        .pos_y = 136,
+        .pos_z = 133,
+    },
+    cbe.OGD{
+        .cube_type = @intFromEnum(cbe.CubeType.enemy),
+        .cube_paint = @intFromEnum(cbe.CubePaint.enemy),
+        .pos_x = 120,
+        .pos_y = 136,
+        .pos_z = 133,
+    },
 };
-const main_link = [_]u8{ 2, 3, 3, 4, 4, 2 };
+var main_link = [_]u8{ 2, 3, 3, 4, 4, 5, 5, 2 };
 
 pub const main_menu: Level = .{
     .name = main_name,
     .ogds = &main_ogds,
+    .link_list = &main_link,
     .sky_color = [_]u8{ 80, 95, 160, 255 },
-    .sun_color = [_]u8{ 255, 128, 0, 0 },
-    .amb_color = [_]u8{ 0, 0, 255, 255 },
-    .amb_lumin = 32,
-    .sun_direction = [_]i8{ 64, 0, 0 },
+    .sun_color = [_]u8{ 172, 128, 96, 0 },
+    .amb_color = [_]u8{ 128, 128, 128, 255 },
+    .amb_lumin = 128,
+    .sun_direction = [_]u8{ 196, 128, 128 },
 
     .cam_rot = csm.convEulToQuat(csm.Vec3{ 0.0, 3.14159 / 2.0, 0.0 }),
     .cam_bind = 0,
     .cam_link = 0,
-    .cam_pos = .{ 32768, 32768, 255 + 32768 },
-    .cam_fov = 0.5,
+    .cam_pos = .{ 32768, 32768, 1500 + 32768 },
+    .cam_fov = 0.4,
 };
 
 const debug_name: []const u8 = "Level 1";
